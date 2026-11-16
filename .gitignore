@@ -1,0 +1,19 @@
+# Compilation
+/target
+/dist
+/extension/dist
+*.exe
+*.wasm
+!/branding/**
+
+# Certificats et données locales
+/deploiement/certs
+*.key
+*.pem
+*.db
+*.db-*
+server.key
+
+# Divers
+.DS_Store
+Thumbs.db

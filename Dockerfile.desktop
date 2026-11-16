@@ -1,0 +1,24 @@
+# syntax=docker/dockerfile:1
+# Compile le client de bureau Windows (locksy.exe) depuis Linux, avec MinGW.
+# Usage : docker build -f Dockerfile.desktop --target export --output type=local,dest=dist .
+FROM rust:1-trixie AS build
+# HTTPS : certains filtres réseau d'entreprise coupent ce paquet en HTTP.
+RUN sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.list.d/debian.sources \
+ && apt-get -o Acquire::Retries=8 update \
+ && apt-get -o Acquire::Retries=8 install -y --no-install-recommends \
+      gcc-mingw-w64-x86-64-win32 binutils-mingw-w64-x86-64 \
+ && rm -rf /var/lib/apt/lists/* \
+ && rustup target add x86_64-pc-windows-gnu
+WORKDIR /src
+COPY Cargo.toml Cargo.lock ./
+COPY crates ./crates
+COPY branding ./branding
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/src/target \
+    cargo test --locked -p locksy-desktop \
+ && cargo build --locked --release -p locksy-desktop --target x86_64-pc-windows-gnu \
+ && mkdir -p /out \
+ && cp target/x86_64-pc-windows-gnu/release/locksy.exe /out/
+
+FROM scratch AS export
+COPY --from=build /out/locksy.exe /locksy.exe

@@ -1,0 +1,20 @@
+/* Fenêtre de l'extension : 380 px de large, contenu qui défile. */
+html, body { width: 380px; height: auto; min-height: 480px; }
+#app { height: auto; }
+.pop { display: grid; gap: 12px; padding: 14px; }
+.pop-head { display: flex; align-items: center; gap: 8px; }
+.pop-head .brand { flex: 1; font-size: 1rem; }
+.pop-head .brand svg { width: 24px; height: 24px; }
+.site { font-size: 0.82rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pop-list { display: grid; gap: 6px; max-height: 330px; overflow-y: auto; }
+.pop-item { display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.pop-item .acts { grid-column: 1 / -1; justify-content: flex-end; }
+.pop-item .icon-tile { width: 32px; height: 32px; font-size: 0.85rem; border-radius: 8px; }
+.pop-item .t { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pop-item .s { font-size: 0.8rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pop-item .acts { display: flex; gap: 2px; }
+.pop-item .acts .btn { padding: 4px 6px; min-width: 0; }
+.section-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.pop .auth-card { box-shadow: none; padding: 0; border: 0; }
+.pop .totp-mini { font-family: var(--mono); font-size: 0.8rem; color: var(--accent); }
+.toasts { left: 12px; right: 12px; bottom: 12px; }

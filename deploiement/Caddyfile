@@ -1,0 +1,22 @@
+# Remplacez locksy.corp.local par le nom DNS choisi pour Locksy.
+{
+	# Pas d'appel à Let's Encrypt : certificat interne uniquement.
+	auto_https disable_certs
+}
+
+http://locksy.corp.local {
+	redir https://locksy.corp.local{uri} permanent
+}
+
+https://locksy.corp.local {
+	tls /certs/locksy.crt /certs/locksy.key {
+		protocols tls1.2 tls1.3
+	}
+	header Strict-Transport-Security "max-age=31536000"
+	request_body {
+		max_size 20MB
+	}
+	reverse_proxy locksy:8743 {
+		header_up X-Forwarded-For {remote_host}
+	}
+}

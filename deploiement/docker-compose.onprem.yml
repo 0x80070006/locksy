@@ -1,0 +1,50 @@
+# Locksy sur site : serveur Linux du domaine, HTTPS avec un certificat AD CS.
+# Usage (depuis le dossier locksy/) :
+#   docker compose -f deploiement/docker-compose.onprem.yml up -d --build
+name: locksy
+
+services:
+  locksy:
+    build: ..
+    image: locksy:1.0.0
+    restart: unless-stopped
+    # Aucun port publié : seul le proxy HTTPS joint Locksy.
+    expose:
+      - "8743"
+    volumes:
+      - locksy-data:/data
+    environment:
+      LOCKSY_TRUST_PROXY: "true"
+      # Journal d'audit vers votre SIEM / collecteur syslog interne (facultatif) :
+      # LOCKSY_SYSLOG: "udp://syslog.corp.local:514"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 512m
+    pids_limit: 128
+
+  proxy:
+    image: caddy:2.8.4-alpine
+    restart: unless-stopped
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificat et clé émis par votre AD CS (voir le guide) :
+      - ./certs:/certs:ro
+      - caddy-data:/data
+    depends_on:
+      - locksy
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+
+volumes:
+  locksy-data:
+  caddy-data:

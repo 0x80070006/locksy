@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Locksy">
+  <defs>
+    <linearGradient id="fond" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#16927f"/>
+      <stop offset="1" stop-color="#0b4a5a"/>
+    </linearGradient>
+    <linearGradient id="trou" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#11806f"/>
+      <stop offset="1" stop-color="#0b4a5a"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#fond)"/>
+  <!-- Anse du cadenas -->
+  <path d="M168 240 V184 a88 88 0 0 1 176 0 V240" fill="none" stroke="#ffffff" stroke-width="46" stroke-linecap="round"/>
+  <!-- Corps -->
+  <rect x="112" y="226" width="288" height="214" rx="54" fill="#ffffff"/>
+  <!-- Serrure en forme de L -->
+  <path d="M226 278 a14 14 0 0 1 14 -14 h4 a14 14 0 0 1 14 14 v80 h48 a14 14 0 0 1 14 14 v4 a14 14 0 0 1 -14 14 h-66 a14 14 0 0 1 -14 -14 z" fill="url(#trou)"/>
+</svg>

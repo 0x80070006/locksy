@@ -1,0 +1,16 @@
+[package]
+name = "locksy-wasm"
+description = "Noyau Locksy compilé en WebAssembly pour l'interface web"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+locksy-core = { path = "../locksy-core" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+zeroize = "1"
+getrandom = { version = "0.2", features = ["custom"] }

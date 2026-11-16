@@ -1,0 +1,32 @@
+name: locksy
+
+services:
+  locksy:
+    build: .
+    image: locksy:1.0.0
+    container_name: locksy
+    restart: unless-stopped
+    # Accessible uniquement depuis ce poste. Pour un accès réseau, placez un
+    # proxy inverse TLS devant (voir README) plutôt que d'exposer ce port.
+    ports:
+      - "127.0.0.1:8743:8743"
+    volumes:
+      - locksy-data:/data
+    environment:
+      LOCKSY_TRUST_PROXY: "false"
+      # Envoi du journal d'audit vers votre SIEM (Graylog, Sekoia, Splunk, rsyslog…) :
+      # LOCKSY_SYSLOG: "udp://siem.entreprise.local:514"
+      # Fournisseur SSO local en http, pour un essai uniquement (jamais en production) :
+      # LOCKSY_SSO_ALLOW_HTTP: "true"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 512m
+    pids_limit: 128
+
+volumes:
+  locksy-data:

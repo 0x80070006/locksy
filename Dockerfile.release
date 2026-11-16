@@ -1,0 +1,30 @@
+# syntax=docker/dockerfile:1
+# Construit tous les fichiers d'une version de Locksy :
+#   docker build -f Dockerfile.release --target export --output type=local,dest=dist/release .
+# - locksy-server : serveur Linux x86_64 autonome (statique, musl), toutes distributions
+# - locksy.wasm   : noyau cryptographique pour l'interface web et l'extension
+# - locksy.exe    : client Windows (icône et informations de version intégrées)
+FROM rust:1-trixie AS build
+RUN sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.list.d/debian.sources \
+ && apt-get -o Acquire::Retries=8 update \
+ && apt-get -o Acquire::Retries=8 install -y --no-install-recommends \
+      musl-tools gcc-mingw-w64-x86-64-win32 binutils-mingw-w64-x86-64 \
+ && rm -rf /var/lib/apt/lists/* \
+ && rustup target add x86_64-unknown-linux-musl wasm32-unknown-unknown x86_64-pc-windows-gnu
+WORKDIR /src
+COPY Cargo.toml Cargo.lock ./
+COPY crates ./crates
+COPY branding ./branding
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/src/target \
+    cargo test --locked --workspace \
+ && cargo build --locked --release -p locksy-server --target x86_64-unknown-linux-musl \
+ && cargo build --locked --release -p locksy-wasm --target wasm32-unknown-unknown \
+ && cargo build --locked --release -p locksy-desktop --target x86_64-pc-windows-gnu \
+ && mkdir -p /out \
+ && cp target/x86_64-unknown-linux-musl/release/locksy-server /out/ \
+ && cp target/wasm32-unknown-unknown/release/locksy_wasm.wasm /out/locksy.wasm \
+ && cp target/x86_64-pc-windows-gnu/release/locksy.exe /out/
+
+FROM scratch AS export
+COPY --from=build /out/ /
