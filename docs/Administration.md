@@ -22,8 +22,8 @@ L'organisation garde toujours au moins un propriétaire actif.
 | Invitations | lien à usage unique, lié à une adresse, valable 7 jours |
 | Journal d'audit | recherche, filtres par type et par date, pagination, **export CSV** |
 | Règles de sécurité | 2FA obligatoire, inactivité, durée de session, conservation du journal et de la corbeille |
-| Active Directory | connecteur LDAPS : voir [Déploiement avec Active Directory](Deploiement-Active-Directory) |
-| Authentification unique | OpenID Connect : voir [SSO et SCIM](SSO-et-SCIM) |
+| Active Directory | connecteur LDAPS : voir [Déploiement avec Active Directory](Deploiement-Active-Directory.md) |
+| Authentification unique | OpenID Connect : voir [SSO et SCIM](SSO-et-SCIM.md) |
 | Annuaire (SCIM) | jeton, URL du locataire, comptes poussés par l'annuaire |
 
 ## Supprimer un compte

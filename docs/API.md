@@ -71,4 +71,4 @@ Erreurs : statut HTTP et corps `{"error": "code", "message": "texte en français
 
 ## SCIM
 
-Sous `/scim/v2`, jeton porteur dédié : voir [SSO et SCIM](SSO-et-SCIM).
+Sous `/scim/v2`, jeton porteur dédié : voir [SSO et SCIM](SSO-et-SCIM.md).

@@ -36,5 +36,5 @@ Oui, via l'interface web, adaptée aux petits écrans et installable comme une a
 n'y a pas encore d'application mobile native.
 
 **Locksy a-t-il été audité ?**
-Pas encore par un tiers. Le modèle est documenté dans [Chiffrement et sécurité](Chiffrement-et-securite) ;
+Pas encore par un tiers. Le modèle est documenté dans [Chiffrement et sécurité](Chiffrement-et-securite.md) ;
 les signalements de vulnérabilité sont bienvenus (voir `SECURITY.md`).

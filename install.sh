@@ -167,7 +167,7 @@ elif [ ! -f "$CONF/tls/locksy.crt" ]; then
     -addext "subjectAltName=DNS:$DOMAIN" -keyout "$CONF/tls/locksy.key" -out "$CONF/tls/locksy.crt" 2>/dev/null
   chmod 600 "$CONF/tls/locksy.key"
   warn "Certificat AUTOSIGNÉ créé pour $DOMAIN : les navigateurs afficheront une alerte."
-  warn "Remplacez-le par un certificat de votre autorité (voir le wiki), puis relancez ce script avec --cert et --key."
+  warn "Remplacez-le par un certificat de votre autorité (voir docs/Deploiement-Active-Directory.md), puis relancez ce script avec --cert et --key."
 fi
 
 # ----------------------------------------------------------------- Mode native
@@ -288,6 +288,6 @@ $([ "$MODE" = native ] && echo "  Réglages :     $CONF/locksy.env  (puis : syst
 Étapes suivantes :
   1. Créez un enregistrement DNS « $DOMAIN » vers ce serveur et ouvrez le port $PORT.
   2. Ouvrez $URL : le premier compte créé devient propriétaire.
-  3. Active Directory, SSO, sauvegardes : voir le wiki du projet.
+  3. Active Directory, SSO, sauvegardes : https://github.com/$REPO/tree/main/docs
 
 FIN

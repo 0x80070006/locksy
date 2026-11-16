@@ -8,7 +8,7 @@
 - `systemd` (mode natif) **ou** Docker (mode conteneur).
 - `curl` (ou `wget`) et `openssl` si vous laissez le script créer un certificat temporaire.
 - Un nom DNS, par exemple `locksy.corp.local`, et idéalement un certificat émis par votre
-  autorité (AD CS) : voir [Déploiement avec Active Directory](Deploiement-Active-Directory).
+  autorité (AD CS) : voir [Déploiement avec Active Directory](Deploiement-Active-Directory.md).
 
 ## Script d'installation
 
@@ -92,7 +92,7 @@ docker logs -f locksy
    et rangez la **clé de récupération** hors ligne.
 3. Activez la double authentification (Paramètres > Sécurité).
 4. Créez un **second propriétaire** : c'est l'accès de secours si l'annuaire est indisponible.
-5. Branchez l'annuaire : [Déploiement avec Active Directory](Deploiement-Active-Directory).
+5. Branchez l'annuaire : [Déploiement avec Active Directory](Deploiement-Active-Directory.md).
 
 ## Autres façons d'installer
 

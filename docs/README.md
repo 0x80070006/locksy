@@ -1,6 +1,6 @@
-# Locksy
+# Documentation de Locksy
 
-<img src="https://raw.githubusercontent.com/0x80070006/locksy/main/branding/locksy.svg" width="96" align="right" alt="Logo Locksy">
+<img src="../branding/locksy.svg" width="96" align="right" alt="Logo Locksy">
 
 Gestionnaire de mots de passe d'entreprise, **chiffré de bout en bout** et **hébergé chez
 vous** : serveur Rust, interface web, client Windows, extension Edge/Chrome, intégration
@@ -10,17 +10,17 @@ Active Directory sur site, SSO OpenID Connect et SCIM.
 
 | Je veux… | Page |
 |---|---|
-| Installer le serveur (VM Linux ou Docker) | [Installation du serveur](Installation-du-serveur) |
-| Brancher l'Active Directory, sans cloud | [Déploiement avec Active Directory](Deploiement-Active-Directory) |
-| Comprendre le chiffrement | [Chiffrement et sécurité](Chiffrement-et-securite) |
-| Découvrir les fonctionnalités | [Fonctionnalités](Fonctionnalites) |
-| Administrer l'organisation | [Administration](Administration) |
-| Équiper les postes | [Client Windows](Client-Windows) · [Extension navigateur](Extension-navigateur) |
-| Utiliser Entra ID, Okta, ADFS, SCIM | [SSO et SCIM](SSO-et-SCIM) |
-| Sauvegarder, mettre à jour | [Sauvegarde et mises à jour](Sauvegarde-et-mises-a-jour) |
-| Intégrer Locksy à un autre outil | [API](API) |
-| Compiler, contribuer | [Développement](Developpement) |
-| Questions fréquentes | [FAQ](FAQ) |
+| Installer le serveur (VM Linux ou Docker) | [Installation du serveur](Installation-du-serveur.md) |
+| Brancher l'Active Directory, sans cloud | [Déploiement avec Active Directory](Deploiement-Active-Directory.md) |
+| Comprendre le chiffrement | [Chiffrement et sécurité](Chiffrement-et-securite.md) |
+| Découvrir les fonctionnalités | [Fonctionnalités](Fonctionnalites.md) |
+| Administrer l'organisation | [Administration](Administration.md) |
+| Équiper les postes | [Client Windows](Client-Windows.md) · [Extension navigateur](Extension-navigateur.md) |
+| Utiliser Entra ID, Okta, ADFS, SCIM | [SSO et SCIM](SSO-et-SCIM.md) |
+| Sauvegarder, mettre à jour | [Sauvegarde et mises à jour](Sauvegarde-et-mises-a-jour.md) |
+| Intégrer Locksy à un autre outil | [API](API.md) |
+| Compiler, contribuer | [Développement](Developpement.md) |
+| Questions fréquentes | [FAQ](FAQ.md) |
 
 ## En bref
 

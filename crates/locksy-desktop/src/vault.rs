@@ -38,7 +38,7 @@ pub struct Item {
 
 pub struct Vault {
     pub profile: Profile,
-    /// Conservée délocksyillée pendant la session, effacée au locksyillage.
+    /// Conservée déverrouillée pendant la session, effacée au verrouillage.
     _user_key: SecretKey,
     priv_key: SecretKey,
     pub collections: Vec<Collection>,

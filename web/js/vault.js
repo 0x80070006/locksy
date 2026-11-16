@@ -113,7 +113,7 @@ function unlockWith(profile, encKey) {
   }
 }
 
-/** Délocksyille avec la session déjà ouverte. */
+/** Déverrouille avec la session déjà ouverte. */
 export async function unlock(password) {
   const profile = await api("GET", "/me");
   const mk = call("derive_master", { password, kdf: profile.kdf });
@@ -400,7 +400,7 @@ export function healthReport() {
 
 // ------------------------------------------------------------ Session de l'extension
 
-/** Exporte les clés délocksyillées (gardées en mémoire par le navigateur, jamais sur disque). */
+/** Exporte les clés déverrouillées (gardées en mémoire par le navigateur, jamais sur disque). */
 export function exportSession() {
   return {
     profile: state.profile,

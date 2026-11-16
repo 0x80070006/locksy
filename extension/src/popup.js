@@ -1,4 +1,4 @@
-// Extension Locksy : délocksyillage, recherche, remplissage et ajout d'identifiants.
+// Extension Locksy : déverrouillage, recherche, remplissage et ajout d'identifiants.
 // Même noyau cryptographique que l'interface web (WebAssembly), mêmes règles :
 // le serveur ne reçoit que des chiffrés.
 
@@ -128,7 +128,7 @@ async function renderLogin(error, pending) {
   const pw = h("input", { class: "input", id: "pw", type: "password", autocomplete: "current-password" });
   const code = h("input", { class: "input", id: "code", inputmode: "numeric", maxlength: 8, placeholder: "123456" });
   const err = h("div", { class: `notice bad ${error ? "" : "hidden"}` }, error || "");
-  const btn = h("button", { class: "btn primary block", type: "submit" }, pending ? "Valider" : "Délocksyiller");
+  const btn = h("button", { class: "btn primary block", type: "submit" }, pending ? "Valider" : "Déverrouiller");
   const health = pending ? null : await fetch(`${server}/api/health`, { cache: "no-store" }).then((r) => r.json()).catch(() => null);
   const sso = health?.sso && ext.identity?.launchWebAuthFlow ? health.sso : null;
   const ssoBtn = sso
@@ -212,7 +212,7 @@ async function ssoLogin(server) {
 function renderSsoPassword(ticket, info, error) {
   const pw = h("input", { class: "input", id: "pw", type: "password", autocomplete: "current-password" });
   const err = h("div", { class: `notice bad ${error ? "" : "hidden"}` }, error || "");
-  const btn = h("button", { class: "btn primary block", type: "submit" }, "Délocksyiller");
+  const btn = h("button", { class: "btn primary block", type: "submit" }, "Déverrouiller");
   const form = h("form", { class: "form", onsubmit: async (e) => {
     e.preventDefault();
     btn.disabled = true;
@@ -253,7 +253,7 @@ function renderMain(query = "") {
   search.addEventListener("input", draw);
   draw();
   shell(
-    h("button", { class: "btn ghost small", title: "Locksyiller", onclick: async () => { await lock(); renderLogin(); } }, icon("lock")),
+    h("button", { class: "btn ghost small", title: "Verrouiller", onclick: async () => { await lock(); renderLogin(); } }, icon("lock")),
     pageHost ? h("div", { class: "site" }, "Site : ", h("strong", {}, pageHost)) : null,
     search,
     h("div", { class: "section-label" }, search.value ? "Résultats" : "Pour ce site"),

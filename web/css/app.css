@@ -247,3 +247,10 @@ kbd { display: inline-block; min-width: 22px; padding: 1px 6px; margin: 0 2px; b
 .step .tick { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--line); flex: none; display: grid; place-items: center; font-weight: 700; font-size: 0.8rem; }
 .step.done { opacity: 0.6; }
 .step.done .tick { background: var(--ok); border-color: var(--ok); color: #fff; }
+
+/* Libellés longs : les boutons pleine largeur passent à la ligne au lieu de déborder. */
+.btn.block { white-space: normal; text-align: center; }
+.list-item .title .clip svg { width: 14px; height: 14px; vertical-align: -2px; margin-left: 4px; color: var(--muted); }
+/* Champs alignés en haut même si les libellés n'ont pas la même hauteur ; onglets sur plusieurs lignes. */
+.field { align-content: start; }
+.tabs { flex-wrap: wrap; }

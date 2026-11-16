@@ -363,11 +363,11 @@ function prefsTab(body) {
   hide.addEventListener("change", () => prefs.set("lockOnHide", hide.checked));
   body.append(h("div", { class: "section" }, h("h3", {}, "Ce navigateur"),
     h("div", { class: "grid2" },
-      h("div", { class: "field" }, h("label", { for: "p-lock" }, "Locksyillage automatique après inactivité"),
+      h("div", { class: "field" }, h("label", { for: "p-lock" }, "Verrouillage automatique après inactivité"),
         sel("p-lock", "autoLockMinutes", 10, [[1, "1 minute"], [5, "5 minutes"], [10, "10 minutes"], [30, "30 minutes"], [60, "1 heure"], [0, "Jamais"]])),
       h("div", { class: "field" }, h("label", { for: "p-clip" }, "Effacement du presse-papiers"),
         sel("p-clip", "clipboardSeconds", 30, [[15, "15 secondes"], [30, "30 secondes"], [60, "1 minute"], [120, "2 minutes"], [0, "Jamais"]]))),
-    h("label", { class: "check" }, hide, "Locksyiller dès que l'onglet passe en arrière-plan")));
+    h("label", { class: "check" }, hide, "Verrouiller dès que l'onglet passe en arrière-plan")));
 }
 
 async function activity(body) {

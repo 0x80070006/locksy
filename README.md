@@ -15,6 +15,37 @@
 de l'utilisateur (navigateur, client Windows ou extension), avec le même noyau cryptographique
 écrit en Rust. Une fuite complète de la base ne livre que des données chiffrées.
 
+<p align="center">
+  <img src="docs/images/coffre.png" alt="Le coffre : liste des éléments et fiche détaillée avec code 2FA">
+</p>
+
+## Aperçu
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/connexion.png" alt="Écran de connexion avec le compte Windows"><br><sub><b>Connexion</b> avec le compte Windows (Active Directory), puis le mot de passe maître</sub></td>
+    <td width="50%"><img src="docs/images/coffre-partage.png" alt="Coffre partagé avec pièce jointe chiffrée"><br><sub><b>Coffre partagé</b> d'équipe, pièce jointe chiffrée, copie en un clic</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/partage.png" alt="Gestion des membres d'un coffre partagé"><br><sub><b>Partage</b> : rôles, empreintes de clé, renouvellement de clé au retrait</sub></td>
+    <td><img src="docs/images/sante.png" alt="Santé des mots de passe"><br><sub><b>Santé des mots de passe</b>, calculée sur le poste</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/administration.png" alt="Vue d'ensemble de l'administration"><br><sub><b>Administration</b> : vue d'ensemble et derniers événements</sub></td>
+    <td><img src="docs/images/active-directory.png" alt="Connecteur Active Directory"><br><sub><b>Active Directory</b> sur site, en LDAPS</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/journal.png" alt="Journal d'audit"><br><sub><b>Journal d'audit</b> filtrable, export CSV et Syslog</sub></td>
+    <td><img src="docs/images/generateur.png" alt="Générateur de mots de passe"><br><sub><b>Générateur</b> de mots de passe et de phrases de passe</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/coffre-sombre.png" alt="Thème sombre"><br><sub><b>Thème sombre</b> automatique</sub></td>
+    <td align="center"><img src="docs/images/extension.png" width="230" alt="Extension de navigateur"><br><sub><b>Extension</b> Edge / Chrome : remplissage protégé contre l'hameçonnage</sub></td>
+  </tr>
+</table>
+
+<sub>Captures réalisées sur un serveur de démonstration, avec des données fictives.</sub>
+
 ## Points forts
 
 - **Chiffrement** : Argon2id (64 Mio), XChaCha20-Poly1305, X25519, HKDF-SHA256 ; chaque donnée
@@ -42,7 +73,7 @@ curl -fsSL https://github.com/0x80070006/locksy/releases/latest/download/install
 Le script propose deux modes : **service systemd** (sans Docker) ou **conteneur Docker**. Il
 installe un certificat temporaire ou le vôtre (`--cert`, `--key`), démarre Locksy en HTTPS et
 vérifie qu'il répond. Pour un réseau isolé, copiez `install.sh` et
-`locksy-server-linux-x86_64.tar.gz` depuis la [dernière version](../../releases/latest) :
+`locksy-server-linux-x86_64.tar.gz` depuis la [dernière version](https://github.com/0x80070006/locksy/releases/latest) :
 
 ```bash
 sudo bash install.sh --archive locksy-server-linux-x86_64.tar.gz --domain locksy.corp.local \
@@ -64,12 +95,12 @@ Pour essayer sur un poste avec Docker Desktop : `docker compose up -d --build`, 
 
 ## Documentation
 
-Tout est dans le **[wiki](../../wiki)** :
+Tout est dans le dossier **[docs](docs/README.md)** :
 
-- [Installation du serveur](../../wiki/Installation-du-serveur) · [Déploiement sur site avec Active Directory](../../wiki/Deploiement-Active-Directory)
-- [Chiffrement et modèle de sécurité](../../wiki/Chiffrement-et-securite)
-- [Fonctionnalités](../../wiki/Fonctionnalites) · [Administration](../../wiki/Administration) · [Client Windows](../../wiki/Client-Windows) · [Extension](../../wiki/Extension-navigateur)
-- [SSO et SCIM](../../wiki/SSO-et-SCIM) · [Sauvegarde et mises à jour](../../wiki/Sauvegarde-et-mises-a-jour) · [API](../../wiki/API) · [Développement](../../wiki/Developpement) · [FAQ](../../wiki/FAQ)
+- [Installation du serveur](docs/Installation-du-serveur.md) · [Déploiement sur site avec Active Directory](docs/Deploiement-Active-Directory.md)
+- [Chiffrement et modèle de sécurité](docs/Chiffrement-et-securite.md)
+- [Fonctionnalités](docs/Fonctionnalites.md) · [Administration](docs/Administration.md) · [Client Windows](docs/Client-Windows.md) · [Extension](docs/Extension-navigateur.md)
+- [SSO et SCIM](docs/SSO-et-SCIM.md) · [Sauvegarde et mises à jour](docs/Sauvegarde-et-mises-a-jour.md) · [API](docs/API.md) · [Développement](docs/Developpement.md) · [FAQ](docs/FAQ.md)
 
 ## Construire depuis les sources
 
@@ -78,11 +109,11 @@ docker build -f Dockerfile.release --target export --output type=local,dest=dist
 ```
 
 Produit le serveur Linux autonome, le module WebAssembly et le client Windows ; les tests
-s'exécutent pendant la construction. Détails : [Développement](../../wiki/Developpement).
+s'exécutent pendant la construction. Détails : [Développement](docs/Developpement.md).
 
 ## Sécurité
 
-Modèle cryptographique détaillé : [SECURITE.md](SECURITE.md) et le wiki. Pour signaler une
+Modèle cryptographique détaillé : [Chiffrement et sécurité](docs/Chiffrement-et-securite.md) et [SECURITE.md](SECURITE.md). Pour signaler une
 vulnérabilité, voir [SECURITY.md](SECURITY.md). Locksy n'a pas encore fait l'objet d'un audit
 externe.
 

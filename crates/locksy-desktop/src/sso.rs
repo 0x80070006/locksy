@@ -163,7 +163,7 @@ mod live_ad_tests {
         println!("OK : mauvais mot de passe Windows refusé");
         let (ticket, info) = windows_login(&client, &env("LOCKSY_TEST_WIN_USER"), &env("LOCKSY_TEST_WIN_PASSWORD")).expect("connexion Windows");
         println!("identité confirmée : {} (coffre existant : {})", info.email, info.registered);
-        match login_with(client, &info.email, &env("LOCKSY_TEST_PASSWORD"), &info.kdf.expect("coffre"), Some(ticket)).expect("délocksyillage") {
+        match login_with(client, &info.email, &env("LOCKSY_TEST_PASSWORD"), &info.kdf.expect("coffre"), Some(ticket)).expect("déverrouillage") {
             LoginOutcome::Done(c, v) => {
                 println!("OK : coffre de {} déchiffré ({} coffre(s))", v.profile.name, v.collections.len());
                 c.send_empty("POST", "/auth/logout").unwrap();

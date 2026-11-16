@@ -36,7 +36,7 @@ clé de coffre ──chiffre──► éléments et nom du coffre
 
 Chaque chiffré est lié à sa place par ses données associées (`verrou:v1:item:<coffre>:<élément>`…) :
 le serveur ne peut ni déplacer, ni échanger, ni rejouer un élément ailleurs sans que le
-déchiffrement échoue. Au délocksyillage, le client vérifie que la clé publique annoncée par
+déchiffrement échoue. Au déverrouillage, le client vérifie que la clé publique annoncée par
 le serveur correspond à sa clé privée.
 
 ## Protections du serveur
@@ -77,7 +77,7 @@ le serveur correspond à sa clé privée.
   « réussirait » de façon anonyme), valeurs échappées dans les filtres (RFC 4515), recherche
   limitée aux membres du groupe et aux comptes actifs, un seul résultat exigé, puis liaison au
   nom de la personne. Le mot de passe Windows n'est jamais stocké et est effacé de la mémoire.
-- Blocage après 5 échecs par identifiant et 20 par adresse IP, avant le locksyillage AD.
+- Blocage après 5 échecs par identifiant et 20 par adresse IP, avant le verrouillage AD.
 - Synchronisation : aucune désactivation si l'annuaire ne renvoie aucun compte.
 
 ## Limites connues

@@ -6,7 +6,7 @@
 //!   `{ "ok": true, "result": ... }` ou `{ "ok": false, "error": "..." }`.
 //!
 //! Les clés restent dans la mémoire WebAssembly : JavaScript ne manipule que
-//! des numéros de poignée. `clear` efface tout le trousseau au locksyillage.
+//! des numéros de poignée. `clear` efface tout le trousseau au verrouillage.
 
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -97,7 +97,7 @@ fn store(key: SecretKey) -> u32 {
 fn with_key<T>(id: u32, f: impl FnOnce(&SecretKey) -> Result<T, String>) -> Result<T, String> {
     KEYRING.with(|k| {
         let k = k.borrow();
-        let key = k.keys.get(&id).ok_or_else(|| "clé inconnue ou effacée (coffre locksyillé ?)".to_string())?;
+        let key = k.keys.get(&id).ok_or_else(|| "clé inconnue ou effacée (coffre verrouillé ?)".to_string())?;
         f(key)
     })
 }

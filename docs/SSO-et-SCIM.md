@@ -1,7 +1,7 @@
 # SSO OpenID Connect et provisionnement SCIM
 
 > Pour un Active Directory sur site sans fournisseur d'identité, préférez le
-> [connecteur Active Directory](Deploiement-Active-Directory). Les deux peuvent coexister.
+> [connecteur Active Directory](Deploiement-Active-Directory.md). Les deux peuvent coexister.
 
 ## Connexion unique (OpenID Connect)
 

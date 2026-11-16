@@ -84,7 +84,7 @@ function shortcutsHelp() {
       row("c", "Copier le code de double authentification"),
       row("e", "Modifier l'élément"),
       row("n", "Nouvel élément"),
-      row("Ctrl L", "Locksyiller (client Windows) · Échap : fermer une fenêtre"),
+      row("Ctrl L", "Verrouiller (client Windows) · Échap : fermer une fenêtre"),
       row("?", "Afficher cette aide")))),
     actions: [{ label: "Fermer", kind: "primary" }],
   });
@@ -156,7 +156,7 @@ export function renderVault(container) {
         onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ui.selected = i.id; renderVault(clear(container)); } } },
         h("div", { class: "icon-tile", style: `background:${colorFor(d.name)}` }, initials(d.name)),
         h("div", { class: "meta" },
-          h("div", { class: "title" }, d.name || "(sans nom)", (d.attachments || []).length ? h("span", { class: "clip", title: "Pièces jointes" }, " 📎") : null),
+          h("div", { class: "title" }, d.name || "(sans nom)", (d.attachments || []).length ? h("span", { class: "clip", title: "Pièces jointes", "aria-label": "Pièces jointes" }, icon("clip")) : null),
           h("div", { class: "sub" }, subtitle(d) || KIND_LABEL[d.kind])),
         h("div", { class: "quick" },
           d.username ? quick("user", "users", "Copier l'identifiant (u)") : null,
@@ -211,7 +211,7 @@ function onboarding(rerender) {
     { done: manual("recovery"), title: "Rangez votre clé de récupération hors de l'ordinateur", text: "Imprimée, dans un coffre physique : c'est le seul moyen de rouvrir votre coffre si vous oubliez le mot de passe maître.",
       check: "recovery" },
     { done: manual("extension"), title: "Installez l'extension du navigateur", text: "Edge ou Chrome : vos identifiants s'affichent et se remplissent sur chaque site (Ctrl+Maj+L).", check: "extension" },
-    { done: manual("desktop"), title: "Installez le client Windows", text: "Pour retrouver vos accès sans navigateur ; le coffre se locksyille tout seul après inactivité.", check: "desktop" },
+    { done: manual("desktop"), title: "Installez le client Windows", text: "Pour retrouver vos accès sans navigateur ; le coffre se verrouille tout seul après inactivité.", check: "desktop" },
     { done: shared, title: "Partagez un coffre avec votre équipe", text: "Les comptes communs dans un coffre partagé, avec des droits de lecture ou d'édition.",
       actions: [["Créer un coffre partagé", () => newCollectionDialog()]] },
   ];
@@ -349,7 +349,7 @@ function renderDetail(pane, item, rerender) {
         h("div", { class: "fieldline" }, h("div", { class: "k" }, `Pièces jointes${(d.attachments || []).length ? ` (${d.attachments.length})` : ""}`),
           writable && !item.deleted_at ? h("div", { class: "actions" }, h("button", { class: "btn small", onclick: () => fileInput.click() }, icon("plus"), "Joindre un fichier"), fileInput) : null),
         (d.attachments || []).map((a) => h("div", { class: "fieldline" },
-          h("div", { style: "min-width:0" }, h("div", { class: "v" }, "📎 ", a.name), h("div", { class: "small muted" }, V.formatSize(a.size))),
+          h("div", { style: "min-width:0" }, h("div", { class: "v row", style: "gap:6px" }, icon("clip"), a.name), h("div", { class: "small muted" }, V.formatSize(a.size))),
           h("div", { class: "actions" },
             h("button", { class: "btn ghost small", onclick: async () => {
               try { saveBlob(await V.downloadAttachment(a), a.name); } catch (e) { toast(e.message, "bad"); }
@@ -391,7 +391,7 @@ function renderDetail(pane, item, rerender) {
     h("div", { class: "detail-head" },
       h("div", { class: "icon-tile", style: `background:${colorFor(d.name)}` }, initials(d.name)),
       h("div", { style: "min-width:0" }, h("h2", {}, d.name || "(sans nom)"),
-        h("div", { class: "row small muted" }, KIND_LABEL[d.kind], "·", col?.personal ? "Personnel" : col?.name,
+        h("div", { class: "row small muted" }, `${KIND_LABEL[d.kind]} · ${col?.personal ? "Personnel" : col?.name}`,
           !writable ? h("span", { class: "chip" }, "Lecture seule") : null))),
     expired ? h("div", { class: "notice warn" }, `Ce mot de passe devait être renouvelé le ${fmtDate(d.expires_at)}.`) : null,
     (d.tags || []).length ? h("div", { class: "row" }, d.tags.map((t) => h("span", { class: "chip accent" }, t))) : null,

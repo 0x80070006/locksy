@@ -11,7 +11,7 @@
 | `web/` | interface web (JavaScript sans framework ni étape de construction) |
 | `extension/` | extension Edge/Chrome (Manifest V3) |
 | `branding/` | logo (SVG source, PNG, ICO) |
-| `docs/wiki/` | ce wiki |
+| `docs/` | cette documentation |
 | `install.sh`, `install-client.ps1` | installation serveur et poste |
 
 ## Construire

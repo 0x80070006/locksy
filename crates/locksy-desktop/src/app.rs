@@ -363,7 +363,7 @@ impl App {
         if matches!(self.screen, Screen::Unlocked) && self.config.auto_lock_minutes > 0 {
             let limit = Duration::from_secs(self.config.auto_lock_minutes * 60);
             if self.last_activity.elapsed() > limit {
-                self.lock("Coffre locksyillé après inactivité.");
+                self.lock("Coffre verrouillé après inactivité.");
             }
             ctx.request_repaint_after(Duration::from_secs(1));
         }
@@ -641,7 +641,7 @@ impl App {
                 });
             } else {
                 ui.horizontal(|ui| {
-                    if primary(ui, "Délocksyiller").clicked() {
+                    if primary(ui, "Déverrouiller").clicked() {
                         submit = true;
                     }
                     if ui.button("Annuler").clicked() {
@@ -750,7 +750,7 @@ impl App {
 
     fn ui_main(&mut self, ctx: &egui::Context) {
         if ctx.input(|i| i.modifiers.command && i.key_pressed(egui::Key::L)) {
-            self.lock("Coffre locksyillé.");
+            self.lock("Coffre verrouillé.");
             return;
         }
         let mut do_sync = false;
@@ -766,7 +766,7 @@ impl App {
                     self.search.clear();
                 }
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui.button("🔒 Locksyiller").on_hover_text("Ctrl+L").clicked() {
+                    if ui.button("🔒 Verrouiller").on_hover_text("Ctrl+L").clicked() {
                         do_lock = true;
                     }
                     if ui.button("🎲 Générateur").clicked() {
@@ -809,7 +809,7 @@ impl App {
             self.start_sync(ctx, Some("Coffre synchronisé.".into()));
         }
         if do_lock {
-            self.lock("Coffre locksyillé.");
+            self.lock("Coffre verrouillé.");
         }
     }
 
@@ -847,7 +847,7 @@ impl App {
             ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
                 ui.add_space(6.0);
                 ui.horizontal(|ui| {
-                    ui.label(RichText::new("Locksyillage auto").small());
+                    ui.label(RichText::new("Verrouillage auto").small());
                     egui::ComboBox::from_id_salt("autolock")
                         .selected_text(match self.config.auto_lock_minutes { 0 => "jamais".to_string(), m => format!("{m} min") })
                         .show_ui(ui, |ui| {

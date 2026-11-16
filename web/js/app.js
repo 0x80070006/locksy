@@ -1,4 +1,4 @@
-// Point d'entrée : écrans de connexion, coquille principale, locksyillage.
+// Point d'entrée : écrans de connexion, coquille principale, verrouillage.
 
 import { h, clear, icon, logo, toast, modal, initials } from "./dom.js";
 import { loadCrypto, call, nextFrame } from "./wasm.js";
@@ -205,10 +205,10 @@ function renderTotp(pending) {
 function renderLock() {
   const pw = passwordInput("password");
   const err = errorBox();
-  const submit = h("button", { class: "btn primary block", type: "submit" }, "Délocksyiller");
+  const submit = h("button", { class: "btn primary block", type: "submit" }, "Déverrouiller");
   const form = h("form", { class: "form", onsubmit: async (e) => {
     e.preventDefault();
-    busyButton(submit, "Délocksyillage…");
+    busyButton(submit, "Déverrouillage…");
     await nextFrame();
     try {
       await V.unlock(pw.input.value);
@@ -216,12 +216,12 @@ function renderLock() {
       afterUnlock();
     } catch (ex) {
       showError(err, ex.message);
-      clear(submit, "Délocksyiller");
+      clear(submit, "Déverrouiller");
       submit.disabled = false;
       pw.input.select();
     }
   } }, h("div", { class: "field" }, h("label", { for: "password" }, "Mot de passe maître"), pw.row), err, submit);
-  clear(root, authCard("Coffre locksyillé", h("p", { class: "muted" }, "Votre session est ouverte, mais les clés ont été effacées de la mémoire. Saisissez votre mot de passe maître."), form,
+  clear(root, authCard("Coffre verrouillé", h("p", { class: "muted" }, "Votre session est ouverte, mais les clés ont été effacées de la mémoire. Saisissez votre mot de passe maître."), form,
     h("div", { class: "auth-links" }, h("a", { href: "#/", onclick: async (e) => { e.preventDefault(); await V.logout(); route(); } }, "Changer de compte"))));
   pw.input.focus();
 }
@@ -326,7 +326,7 @@ async function renderSso(params, preloaded = null) {
   const err = errorBox();
   if (info.registered) {
     const pw = passwordInput("password");
-    const submit = h("button", { class: "btn primary block", type: "submit" }, "Délocksyiller");
+    const submit = h("button", { class: "btn primary block", type: "submit" }, "Déverrouiller");
     const form = h("form", { class: "form", onsubmit: async (e) => {
       e.preventDefault();
       busyButton(submit, "Déchiffrement…");
@@ -340,7 +340,7 @@ async function renderSso(params, preloaded = null) {
         afterUnlock();
       } catch (ex) {
         showError(err, ex.message);
-        clear(submit, "Délocksyiller");
+        clear(submit, "Déverrouiller");
         submit.disabled = false;
       }
     } }, h("div", { class: "field" }, h("label", { for: "password" }, "Mot de passe maître"), pw.row), err, submit);
@@ -435,7 +435,7 @@ async function afterUnlock() {
   route();
 }
 
-// ------------------------------------------------------------ Locksyillage automatique
+// ------------------------------------------------------------ Verrouillage automatique
 
 let idleTimer = null;
 function startAutoLock() {
@@ -509,7 +509,7 @@ function renderShell() {
       h("div", { class: "user-badge" }, h("div", { class: "avatar" }, initials(p.name)),
         h("div", { class: "who" }, h("div", { style: "font-weight:600" }, p.name), h("div", { class: "small muted" }, p.email))),
       h("div", { class: "row" },
-        h("button", { class: "btn small", onclick: lockNow }, icon("lock"), "Locksyiller"),
+        h("button", { class: "btn small", onclick: lockNow }, icon("lock"), "Verrouiller"),
         h("button", { class: "btn small ghost", onclick: async () => { await V.logout(); location.hash = "#/"; route(); } }, icon("logout"), "Quitter"))));
 
   const search = h("input", { class: "input", type: "search", placeholder: "Rechercher (nom, identifiant, site, étiquette)…", value: ui.search, "aria-label": "Rechercher" });

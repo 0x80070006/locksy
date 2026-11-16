@@ -15,7 +15,7 @@ Seule la dernière version publiée reçoit des correctifs de sécurité.
 
 ## Périmètre
 
-Le modèle de sécurité et ses limites connues sont décrits dans [SECURITE.md](SECURITE.md) et la
-page « Chiffrement et sécurité » du wiki. Les limites qui y sont documentées (par exemple, un
+Le modèle de sécurité et ses limites connues sont décrits dans [SECURITE.md](SECURITE.md) et
+[docs/Chiffrement-et-securite.md](docs/Chiffrement-et-securite.md). Les limites qui y sont documentées (par exemple, un
 serveur compromis peut servir une interface web modifiée) ne sont pas des vulnérabilités en
 soi, mais toute idée pour les réduire est bienvenue.

@@ -65,5 +65,5 @@ Score global.
 | Compte Windows (Active Directory) | identifiant et mot de passe AD, puis mot de passe maître |
 | SSO OpenID Connect | ADFS, Entra ID, Okta, Google, Keycloak…, puis mot de passe maître |
 
-Voir aussi : [Administration](Administration), [Client Windows](Client-Windows),
-[Extension navigateur](Extension-navigateur).
+Voir aussi : [Administration](Administration.md), [Client Windows](Client-Windows.md),
+[Extension navigateur](Extension-navigateur.md).

@@ -84,8 +84,8 @@ sudo bash install.sh --domain locksy.corp.local --cert locksy.crt --key locksy.k
 ## 6. ADFS (facultatif)
 
 Avec ADFS 2016 ou plus récent, vous pouvez aussi utiliser la connexion **OpenID Connect**, qui
-profite de l'authentification Windows intégrée : voir [SSO et SCIM](SSO-et-SCIM).
+profite de l'authentification Windows intégrée : voir [SSO et SCIM](SSO-et-SCIM.md).
 
 ## 7. Postes de travail par GPO
 
-Voir [Client Windows](Client-Windows) et [Extension navigateur](Extension-navigateur).
+Voir [Client Windows](Client-Windows.md) et [Extension navigateur](Extension-navigateur.md).
