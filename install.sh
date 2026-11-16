@@ -128,7 +128,7 @@ if [ -n "$ARCHIVE" ]; then
   [ -r "$ARCHIVE" ] || die "Archive introuvable : $ARCHIVE"
   cp "$ARCHIVE" "$WORK/locksy.tar.gz"
 else
-  [ "$REPO" != "__REPO__" ] || die "Indiquez l'archive à installer avec --archive."
+  [ "$REPO" != "__""REPO__" ] || die "Indiquez l'archive à installer avec --archive."
   if [ "$VERSION" = latest ]; then base="https://github.com/$REPO/releases/latest/download"
   else base="https://github.com/$REPO/releases/download/$VERSION"; fi
   info "Téléchargement de Locksy ($VERSION)"
