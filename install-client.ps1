@@ -14,7 +14,11 @@ if ($running) {
   $running | Stop-Process -Force
   $running | Wait-Process -Timeout 10 -ErrorAction SilentlyContinue
 }
-Copy-Item $source (Join-Path $dest "locksy.exe") -Force
+# Windows libère le fichier un instant après la fermeture du client : quelques essais.
+for ($i = 1; $i -le 20; $i++) {
+  try { Copy-Item $source (Join-Path $dest "locksy.exe") -Force -ErrorAction Stop; break }
+  catch { if ($i -eq 20) { throw "Locksy est encore ouvert : fermez-le puis relancez ce script." }; Start-Sleep -Milliseconds 500 }
+}
 Unblock-File (Join-Path $dest "locksy.exe")
 
 $shell = New-Object -ComObject WScript.Shell
