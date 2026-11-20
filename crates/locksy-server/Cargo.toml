@@ -27,7 +27,7 @@ reqwest = { version = "0.12", default-features = false, features = ["json", "rus
 jsonwebtoken = "9"
 url = "2"
 ldap3 = { version = "0.12", default-features = false, features = ["tls-rustls-ring"] }
-axum-server = { version = "0.7", features = ["tls-rustls-no-provider"] }
+axum-server = { version = "0.9", features = ["tls-rustls-no-provider"] }
 # Délai de lecture des en-têtes (minuterie Tokio pour hyper).
 hyper-util = { version = "0.1", features = ["tokio", "server-auto"] }
 rustls = { version = "0.23", default-features = false, features = ["std", "tls12", "ring"] }
