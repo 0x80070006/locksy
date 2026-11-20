@@ -29,7 +29,7 @@ chacha20 = { version = "0.9", default-features = false }
 salsa20 = { version = "0.10", default-features = false }
 pbkdf2 = { version = "0.12", default-features = false, features = ["hmac"] }
 flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
-quick-xml = { version = "0.41", default-features = false }
+quick-xml = { version = "0.42", default-features = false }
 
 # Micro-benchmarks (benches/core.rs). Exclu de Windows avec la toolchain GNU : windows-sys,
 # tiré par criterion, y exige dlltool, absent des postes de développement, ce qui casserait
