@@ -1,0 +1,80 @@
+# Banc de charge Locksy (mode d'emploi : bench/README.md).
+#
+# Toujours lancé avec un nom de projet (-p), qui isole conteneurs, réseau et
+# volume de données :
+#   docker compose -p locksy-bench -f bench/docker-compose.bench.yml up -d --wait locksy
+# Les scripts de bench/scripts/ le font pour vous (option -p, défaut locksy-bench).
+#
+# Le serveur reprend les limites de deploiement/docker-compose.onprem.yml
+# (on mesure ce qu'on livre) et reçoit deux cœurs réservés ; l'injecteur k6
+# tourne sur d'autres cœurs. Aucun port fixe : le port hôte est tiré au sort,
+# lisible par « docker compose -p <projet> port locksy 8743 ».
+
+services:
+  locksy:
+    image: ${LOCKSY_IMAGE:-locksy-bench:local}
+    # Profils : REF-PROD = 512m (défaut), REF-1G = 1g (variable LOCKSY_MEM).
+    cpuset: "${SERVER_CPUSET:-0,1}"
+    cpus: 2
+    mem_limit: ${LOCKSY_MEM:-512m}
+    memswap_limit: ${LOCKSY_MEM:-512m}
+    pids_limit: 128
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      # Le banc joue le rôle du proxy : chaque client virtuel annonce sa propre
+      # adresse par X-Forwarded-For, sinon on ne mesure que des 429.
+      LOCKSY_TRUST_PROXY: "true"
+      LOCKSY_TRUSTED_PROXIES: ${BENCH_SUBNET:-172.30.0.0/24}
+      LOCKSY_SETUP_TOKEN: ${LOCKSY_SETUP_TOKEN:-banc-jeton-installation-0123456789}
+      LOCKSY_ENV: ${LOCKSY_ENV:-production}
+      RUST_LOG: warn
+    volumes:
+      - data:/data
+    # Port hôte aléatoire, sur la boucle locale seulement.
+    ports:
+      - "127.0.0.1::8743"
+    # Sonde rapide au démarrage (up --wait), espacée pendant la mesure.
+    healthcheck:
+      test: ["CMD", "/app/locksy-server", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+      start_interval: 1s
+    networks:
+      bench:
+        ipv4_address: ${BENCH_SERVER_IP:-172.30.0.10}
+
+  # Injecteur de charge : jamais démarré par « up » (profil tools), lancé par
+  # « docker compose … run --rm k6 run /bench/k6/scenarios/<scénario>.js ».
+  k6:
+    image: grafana/k6:1.0.0
+    profiles:
+      - tools
+    cpuset: "${INJECTOR_CPUSET:-4-7}"
+    environment:
+      BASE_URL: http://locksy:8743
+    volumes:
+      - ./k6:/bench/k6:ro
+      - ./seed/out:/bench/out:ro
+      - ./results:/bench/results
+    networks:
+      - bench
+    depends_on:
+      locksy:
+        condition: service_healthy
+
+volumes:
+  data:
+
+networks:
+  bench:
+    ipam:
+      config:
+        - subnet: ${BENCH_SUBNET:-172.30.0.0/24}

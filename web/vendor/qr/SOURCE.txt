@@ -1,0 +1,25 @@
+Décodeur de QR code vendorisé (cahier 00, règle R12) : lecture d'un QR code de
+configuration (otpauth://) quand le navigateur n'a pas BarcodeDetector.
+
+Projet      : jsQR (https://github.com/cozmo/jsQR)
+Version     : 1.4.0 (épinglée)
+Licence     : Apache-2.0 (fichier LICENSE, copié du paquet)
+Paquet      : https://registry.npmjs.org/jsqr/-/jsqr-1.4.0.tgz
+Intégrité   : sha512-dxLob7q65Xg2DvstYkRpkYtmKm2sPJ9oFhrhmudT1dZvNFFTlroai3AWSpLey/w5vMcLBXRgOJsbXpdN9HzU/A==
+              (shasum 8efb8d0a7cc6863cb6d95116b9069123ce9eb2d1, valeurs publiées par le registre npm)
+Fichier     : package/dist/jsQR.js
+SHA-256     : bc40c8a15196236b2314db0856f72ca0b49980cd5413b8c852a7349f5fee0859
+
+Transformation : jsqr-1.4.0.mjs = 3 lignes de commentaire, puis
+  const module = { exports: {} };
+  const exports = module.exports;
+puis dist/jsQR.js sans modification, puis
+  export default module.exports;
+L'enveloppe UMD de webpack voit alors `module` et `exports` et exporte la
+fonction jsQR. Aucun eval ni new Function. Servi depuis 'self' (/vendor/qr/),
+chargé à la demande par web/js/ui/qr.js (import dynamique).
+
+Mise à jour : télécharger la nouvelle version épinglée, vérifier son intégrité
+avec le registre, refaire la même enveloppe, mettre à jour ce fichier,
+SHA256SUMS et le nom du module dans ui/qr.js. Le test
+e2e/tests/ui/qr-vendor.spec.ts vérifie les empreintes.

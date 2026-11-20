@@ -1,0 +1,63 @@
+# syntax=docker/dockerfile:1
+# Construction RAPIDE de l'image serveur pour les tests de bout en bout
+# (run.sh --fast-server) : compilation release SANS les tests cargo, depuis
+# l'image locale locksy-toolchain (Rust épinglé par rust-toolchain.toml, cible
+# wasm32 déjà installée). L'image d'exécution est IDENTIQUE à celle du
+# Dockerfile du dépôt : même image de base épinglée, utilisateur 10001, /data,
+# variables, HEALTHCHECK et ENTRYPOINT.
+#
+#   docker build -f e2e/tools/Dockerfile.server -t locksy-e2e-server:fast .
+#
+# Le Dockerfile du dépôt exécute « cargo test » pendant la construction et n'a
+# pas d'option pour s'en passer : c'est la raison d'être de ce fichier. Il ne
+# remplace pas la vérification complète (tests cargo) avant une livraison.
+# Contexte : la racine du dépôt, filtrée par Dockerfile.server.dockerignore.
+
+ARG TOOLCHAIN_IMAGE=locksy-toolchain:latest
+# Doit rester égal à RUNTIME_IMAGE du Dockerfile du dépôt.
+ARG RUNTIME_IMAGE=debian:trixie-20261104-slim@sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2
+
+FROM ${TOOLCHAIN_IMAGE} AS build
+ENV CARGO_INCREMENTAL=0 \
+    RUSTFLAGS="--remap-path-prefix=/src=. --remap-path-prefix=/usr/local/cargo=/cargo"
+WORKDIR /src
+COPY Cargo.toml Cargo.lock rust-toolchain.toml ./
+COPY crates ./crates
+COPY branding ./branding
+# Caches partagés entre exécutions, verrouillés : deux constructions simultanées
+# (deux agents) attendent leur tour au lieu de corrompre le dossier target.
+RUN --mount=type=cache,id=locksy-e2e-cargo-registry,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,id=locksy-e2e-target,target=/src/target,sharing=locked \
+    cargo build --locked --release -p locksy-server \
+ && mkdir -p /out \
+ && cargo build --locked --release -p locksy-wasm --target wasm32-unknown-unknown --no-default-features \
+ && cp target/wasm32-unknown-unknown/release/locksy_wasm.wasm /out/locksy.wasm \
+ && cargo build --locked --release -p locksy-wasm --target wasm32-unknown-unknown \
+ && cp target/wasm32-unknown-unknown/release/locksy_wasm.wasm /out/locksy-import.wasm \
+ && cp target/release/locksy-server /out/
+
+FROM ${RUNTIME_IMAGE}
+LABEL org.opencontainers.image.title="Locksy (tests E2E, construction rapide)"
+# Correctifs de sécurité de la distribution parus après l'image épinglée
+# (ex. zlib1g CVE-2026-85091 relevée par Trivy).
+RUN apt-get -o Acquire::Retries=8 update \
+ && DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=8 -y upgrade \
+ && rm -rf /var/lib/apt/lists/*
+RUN useradd --system --uid 10001 --no-create-home --shell /usr/sbin/nologin locksy \
+ && mkdir -p /data /app \
+ && chown locksy:locksy /data
+COPY --from=build /out/locksy-server /app/locksy-server
+COPY web /app/web
+COPY --from=build /out/locksy.wasm /app/web/locksy.wasm
+COPY --from=build /out/locksy-import.wasm /app/web/locksy-import.wasm
+USER locksy
+# Mémoire bornée sous charge : deux zones d'allocation glibc au lieu d'une
+# par fil (sinon plus de 450 Mio résidents pour 512 Mio sur le jeu M, et la
+# sauvegarde à chaud fait tuer le serveur) ; fichiers temporaires de SQLite
+# (tris, VACUUM INTO) sur le volume de données et non dans /tmp (tmpfs en mémoire).
+ENV MALLOC_ARENA_MAX=2 SQLITE_TMPDIR=/data
+ENV LOCKSY_DATA=/data LOCKSY_WEB=/app/web LOCKSY_BIND=0.0.0.0:8743 RUST_LOG=info
+EXPOSE 8743 8443
+VOLUME ["/data"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s CMD ["/app/locksy-server", "healthcheck"]
+ENTRYPOINT ["/app/locksy-server"]

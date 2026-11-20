@@ -1,0 +1,74 @@
+# Surcouche des tests de sécurité (lot Q4), superposée à e2e/docker-compose.e2e.yml
+# par e2e/security/run.sh :
+#
+#   docker compose -p <cle> -f e2e/docker-compose.e2e.yml -f e2e/security/docker-compose.securite.yml …
+#
+# Aucun port publié, aucun chemin relatif (ils se résoudraient depuis e2e/).
+# Sans ancre YAML commune aux deux fichiers, chaque service est décrit en entier.
+#
+#   locksy-direct  http://locksy-direct:8743  production SANS proxy de confiance :
+#                  X-Forwarded-For ignoré, pas de HSTS en HTTP, /api/test/* absent,
+#                  plafond de connexions par adresse réglé à 5, en-têtes lus en 3 s.
+#   locksy-vierge  http://locksy-vierge:8743  serveur neuf derrière le proxy de confiance
+#                  du fichier de base, réservé à installation.spec.ts.
+
+services:
+  locksy-direct:
+    image: ${LOCKSY_E2E_IMAGE:-locksy-e2e-server:fast}
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /data:uid=10001,gid=10001,mode=0700
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2g
+    environment:
+      LOCKSY_SETUP_TOKEN: e2e-jeton-installation-direct-0123456789
+      LOCKSY_TRUST_PROXY: "false"
+      # LOCKSY_ENV absent : production (compteurs de test non exposés).
+      LOCKSY_HEADER_TIMEOUT_SECS: "3"
+      # Preuve que le plafond par adresse se règle (défaut : 100 par 10 minutes).
+      LOCKSY_RATELIMIT_LOGIN_IP: "5"
+      RUST_LOG: warn
+    healthcheck:
+      test: ["CMD", "/app/locksy-server", "healthcheck"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  locksy-vierge:
+    image: ${LOCKSY_E2E_IMAGE:-locksy-e2e-server:fast}
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /data:uid=10001,gid=10001,mode=0700
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2g
+    environment:
+      LOCKSY_SETUP_TOKEN: e2e-jeton-installation-vierge-0123456789
+      # Même confiance que le fichier de base : une adresse distincte par essai.
+      LOCKSY_TRUST_PROXY: "true"
+      LOCKSY_TRUSTED_PROXIES: 10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+      LOCKSY_ENV: test
+      RUST_LOG: warn
+    healthcheck:
+      test: ["CMD", "/app/locksy-server", "healthcheck"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  runner:
+    environment:
+      SECURITY_DIRECT_URL: http://locksy-direct:8743
+      SECURITY_VIERGE_URL: http://locksy-vierge:8743

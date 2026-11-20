@@ -1,0 +1,8 @@
+-- 
+{{org}}, gestionnaire de mots de passe
+{{?url}}
+Assistance : {{?support}}
+Protection des données : {{?dpo}}
+Politique de confidentialité : {{?privacy_url}}
+Mentions légales : {{?notice_url}}
+{{?no_reply}}

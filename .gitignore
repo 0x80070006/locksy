@@ -17,3 +17,21 @@ server.key
 # Divers
 .DS_Store
 Thumbs.db
+
+# Banc de charge (bench/README.md) : caches, résultats, instantanés et
+# comptes de test semés (mots de passe de test : jamais commités)
+/bench/.cache/
+/bench/results/
+/bench/snapshots/
+/bench/seed/out/
+/bench/node_modules/
+/bench/.env
+
+# Tests de bout en bout (e2e/)
+/e2e/node_modules/
+/e2e/test-results/
+/e2e/playwright-report/
+/e2e/blob-report/
+/e2e/.state/
+/e2e/.npm-cache/
+/e2e/.env

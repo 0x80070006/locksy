@@ -1,0 +1,4 @@
+Double authentification réinitialisée
+Un administrateur a réinitialisé la double authentification de votre compte {{org}}. Vous devrez la configurer de nouveau à votre prochaine connexion.
+
+Si vous n'aviez pas demandé cette réinitialisation, prévenez sans attendre votre administrateur.

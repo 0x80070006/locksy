@@ -1,0 +1,19 @@
+{
+  "name": "locksy-e2e",
+  "private": true,
+  "type": "module",
+  "description": "Tests de bout en bout de Locksy (Playwright), exécutés dans l'image mcr.microsoft.com/playwright:v1.49.1-noble par tools/run.sh.",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --project=ui-gallery",
+    "test:smoke": "playwright test tests/smoke"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.10.1",
+    "@playwright/test": "1.49.1"
+  },
+  "overrides": {
+    "playwright-core": "1.49.1"
+  },
+  "//": "overrides : @axe-core/playwright déclare playwright-core en dépendance paire (>= 1.0.0) ; sans épinglage, npm installerait la dernière version à côté de celle de @playwright/test."
+}

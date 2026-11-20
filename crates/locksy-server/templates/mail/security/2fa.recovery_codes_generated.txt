@@ -1,0 +1,4 @@
+Nouveaux codes de secours
+De nouveaux codes de secours ont été créés pour la double authentification de votre compte {{org}}. Les anciens codes ne fonctionnent plus.
+
+Si vous n'êtes pas à l'origine de ce changement, prévenez sans attendre votre administrateur.

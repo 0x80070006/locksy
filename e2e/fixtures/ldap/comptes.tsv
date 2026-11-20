@@ -1,0 +1,6 @@
+# Comptes de l'annuaire Active Directory des tests (profil « ldap »).
+# Valeurs de TEST uniquement. Colonnes séparées par des tabulations :
+# identifiant, mot de passe, prénom, nom, adresse, état (actif|desactive).
+jeanne.martin	Ad-Jeanne-2026-essai	Jeanne	Martin	jeanne.martin@e2e.test	actif
+karim.benali	Ad-Karim-2026-essai	Karim	Benali	karim.benali@e2e.test	actif
+louis.ancien	Ad-Louis-2026-essai	Louis	Ancien	louis.ancien@e2e.test	desactive

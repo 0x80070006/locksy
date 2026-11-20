@@ -40,7 +40,9 @@ sudo bash install.sh --domain locksy.corp.local --cert locksy.crt --key locksy.k
 
 ## 3. Configurer Locksy
 
-**Administration > Active Directory** :
+**Administration > Connexion d'entreprise > Compte Windows (Active Directory)**
+(`#/admin/connexion/ad`). L'assistant suit quatre étapes : « Serveur et compte de service »,
+« Qui peut se connecter », « Test avec votre compte » et « Activation ». Champs :
 
 | Champ | Exemple |
 |---|---|
@@ -51,10 +53,11 @@ sudo bash install.sh --domain locksy.corp.local --cert locksy.crt --key locksy.k
 | Attributs | `sAMAccountName`, `mail` (repli : `userPrincipalName`) |
 | Certificat de l'autorité | contenu du `.cer` |
 
-**Tester la connexion** affiche le nombre de comptes trouvés et quelques exemples. Cochez ensuite :
+L'étape « Test avec votre compte » vérifie la connexion avec votre propre compte Windows
+(« Identifiant Windows », « Mot de passe Windows »). Réglez ensuite :
 
-- **Synchroniser les comptes** (toutes les 15 minutes par défaut, bouton « Synchroniser
-  maintenant ») :
+- **Synchroniser les comptes depuis l'annuaire** (« Synchroniser toutes les » 15 minutes par
+  défaut, bouton « Synchroniser maintenant ») :
   - ajouté au groupe : compte ouvert, en attente de première connexion ;
   - désactivé dans l'AD ou retiré du groupe : **accès coupé immédiatement**, toutes sessions ;
   - renommé : nom et adresse mis à jour ;
@@ -62,8 +65,22 @@ sudo bash install.sh --domain locksy.corp.local --cert locksy.crt --key locksy.k
     n'est désactivé.
 - **Connexion avec le compte Windows** : `CORP\jdupont` ou `jdupont@corp.local`, mot de passe
   Windows vérifié par le contrôleur, puis mot de passe maître.
-- **Imposer la connexion Windows** une fois tout vérifié (les propriétaires gardent l'accès de
-  secours par mot de passe maître).
+- **Mode « Imposé »** une fois tout vérifié, disponible après un test réussi de moins de
+  24 heures (les propriétaires gardent l'accès de secours par mot de passe maître).
+
+### Synchronisation à blanc et garde-fou
+
+**Lancer une synchronisation à blanc** (`POST /api/admin/ldap/sync?dry_run=true`) montre ce que ferait la
+synchronisation sans rien écrire : comptes trouvés, créés, mis à jour, désactivés, et la
+liste des comptes ignorés avec leur raison (adresse absente ou invalide, domaine non
+autorisé, compte désactivé dans l'annuaire, adresse en double, dernier propriétaire).
+L'historique des synchronisations est affiché sur la page d'état.
+
+Une synchronisation qui désactiverait plus de `directory.max_deprovision_percent` % des
+comptes issus de l'annuaire est refusée (409 `too_many_deprovisions`, événement critique
+`ldap.sync_refused`) : vérifiez le filtre et le groupe, ou relevez le seuil. Un compte
+disparu de l'annuaire suit `directory.deprovision` (désactivation, ou désactivation puis
+suppression après `directory.delete_after_days` jours).
 
 ## 4. Première connexion d'un collaborateur
 
@@ -79,7 +96,14 @@ sudo bash install.sh --domain locksy.corp.local --cert locksy.crt --key locksy.k
 - Valeurs échappées dans les filtres LDAP (RFC 4515) ; un seul compte actif du groupe accepté.
 - Le mot de passe Windows transite en HTTPS jusqu'au serveur, qui le présente au contrôleur ;
   il n'est **jamais enregistré** et est effacé de la mémoire.
-- Blocage après 5 échecs par identifiant, avant le verrouillage de l'AD.
+- Tentatives comptées avant toute liaison : blocage après 5 échecs par couple (identifiant,
+  adresse IP) et 50 par identifiant, avant le verrouillage de l'AD ; 100 tentatives par
+  adresse IP en 10 minutes au plus.
+- Réponses génériques : `invalid_credentials` (401) pour tout échec d'identifiants,
+  `ldap_unavailable` (503) pour toute panne d'annuaire (le détail ne va qu'au journal du
+  serveur) ; un échec dure au moins 1,5 s. Chaque opération sur l'annuaire est limitée à
+  10 s, une synchronisation à 5 min.
+- Le code de **double authentification** Locksy est demandé ensuite si le compte l'a activée.
 
 ## 6. ADFS (facultatif)
 

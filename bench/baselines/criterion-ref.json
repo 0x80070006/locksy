@@ -1,0 +1,89 @@
+{
+  "format": 1,
+  "recorded_at": "2026-11-17T22:29:35.941Z",
+  "env": {
+    "cpus": 2,
+    "cpuset": "2,3",
+    "image": "locksy-toolchain:latest (058afb49e20a)",
+    "rustc": "rustc 1.100.0 (0ef1bc386 2026-11-09)",
+    "note": "mesuré pendant que d'autres agents compilaient : bruit possible. Commande : docker run --cpus 2 --cpuset-cpus 2,3 … cargo bench -p locksy-core --bench core -- --noplot (hôte Windows 11, Docker Desktop WSL2, 8 cœurs logiques)."
+  },
+  "benchmarks": {
+    "aead/decrypt_100KiB": {
+      "median_ns": 235437,
+      "max_ns": 400000
+    },
+    "aead/decrypt_10MiB": {
+      "median_ns": 29489479,
+      "max_ns": 80000000
+    },
+    "aead/decrypt_1KiB": {
+      "median_ns": 3892,
+      "max_ns": 15000
+    },
+    "aead/encrypt_100KiB": {
+      "median_ns": 172183,
+      "max_ns": 400000
+    },
+    "aead/encrypt_10MiB": {
+      "median_ns": 27581968,
+      "max_ns": 80000000
+    },
+    "aead/encrypt_1KiB": {
+      "median_ns": 4195,
+      "max_ns": 15000
+    },
+    "generator/passphrase_5": {
+      "median_ns": 30496
+    },
+    "generator/password_20": {
+      "median_ns": 16652,
+      "max_ns": 50000
+    },
+    "kdf/client_derive_master_64MiB_t3": {
+      "median_ns": 171866729,
+      "min_ns": 150000000,
+      "max_ns": 900000000
+    },
+    "kdf/server_rehash_19MiB_t2": {
+      "median_ns": 29224920,
+      "max_ns": 60000000
+    },
+    "keywrap/unwrap_key": {
+      "median_ns": 1815,
+      "max_ns": 15000
+    },
+    "keywrap/wrap_key": {
+      "median_ns": 2368,
+      "max_ns": 15000
+    },
+    "sealing/open_key": {
+      "median_ns": 84030,
+      "max_ns": 200000
+    },
+    "sealing/seal_key": {
+      "median_ns": 86506,
+      "max_ns": 200000
+    },
+    "strength/strength_estimate": {
+      "median_ns": 48386,
+      "max_ns": 2000000
+    },
+    "totp/generate": {
+      "median_ns": 1096,
+      "max_ns": 10000
+    },
+    "totp/verify_window": {
+      "median_ns": 2046,
+      "max_ns": 40000
+    }
+  },
+  "wasm": {
+    "node": "26.13.1",
+    "call_overhead_us": 34.87,
+    "decrypt_1KiB_x10000_ms": 1026.3,
+    "decrypt_many_required": false,
+    "derive_master_64MiB_t3_ms": 1044,
+    "rule": "decrypt_many nécessaire si 10 000 decrypt de 1 Kio prennent 1,5 s ou plus sous Node"
+  }
+}

@@ -1,0 +1,101 @@
+# Politique de la chaîne d'approvisionnement Rust, vérifiée par cargo-deny
+# (format version 2) : `cargo deny check`. Lancée par le job « deny » de
+# .github/workflows/ci.yml.
+#
+# - advisories : aucune vulnérabilité connue (base RustSec), aucune version retirée ;
+# - licenses   : seules des licences permissives connues sont admises ;
+# - bans       : pas de dépendance en version « * » ;
+# - sources    : uniquement crates.io (ni git, ni autre registre).
+
+[graph]
+# Plateformes réellement livrées : le serveur (glibc et musl), le client
+# Windows et le module WebAssembly. Les crates propres à macOS ou iOS sortent
+# ainsi du périmètre. Limite : le graphe est commun au workspace, donc les
+# dépendances Linux du client de bureau (eframe sous Linux : accesskit_unix,
+# zbus…) y figurent, bien que ce client ne soit livré que pour Windows.
+targets = [
+    "x86_64-unknown-linux-gnu",
+    "x86_64-unknown-linux-musl",
+    "x86_64-pc-windows-gnu",
+    "wasm32-unknown-unknown",
+]
+
+[advisories]
+version = 2
+db-urls = ["https://github.com/rustsec/advisory-db"]
+yanked = "deny"
+# Crates abandonnées : bloquant pour nos dépendances DIRECTES seulement. Les
+# dépendances transitives abandonnées (constat du 17/11/2026 : paste,
+# rustls-pemfile, ttf-parser, zvariant, zvariant_derive, zbus_names) restent
+# visibles dans `cargo audit` (avertissements) et se règlent en montant la
+# dépendance directe qui les tire (eframe, axum-server).
+unmaintained = "workspace"
+# Chaque exception porte : identifiant, raison, condition de retrait.
+# L'objectif est une liste vide ; la même liste figure dans le job « audit »
+# de ci.yml (cargo audit --ignore).
+ignore = [
+    # SQLite embarqué < 3.54.0 (libsqlite3-sys 0.30, via rusqlite 0.32) : une
+    # paire base + -wal FABRIQUÉE (tailles de page différentes) peut renvoyer
+    # de la mémoire non initialisée. Vecteur local : il faut pouvoir écrire
+    # dans le dossier de données (0700, utilisateur locksy), ce qui donne déjà
+    # la base entière ; la restauration documentée supprime -wal et -shm.
+    # Retrait : passage à rusqlite 0.41 (libsqlite3-sys 0.39, SQLite 3.54.1).
+    { id = "RUSTSEC-2026-0459", reason = "vecteur local (dossier de données) ; correctif = rusqlite 0.41, à faire" },
+    # quick-xml 0.30 (temps quadratique, allocation non bornée dans NsReader) :
+    # tiré uniquement par zbus_xml ← accesskit_unix ← eframe SOUS LINUX, qui
+    # lit l'introspection XML du bus D-Bus de la session locale. Le client de
+    # bureau n'est livré que pour Windows ; le serveur n'en dépend pas.
+    # Retrait : eframe/accesskit tirant zbus ≥ 5 (quick-xml ≥ 0.41).
+    { id = "RUSTSEC-2026-0194", reason = "client de bureau Linux seulement (non livré), XML du bus D-Bus local" },
+    { id = "RUSTSEC-2026-0195", reason = "client de bureau Linux seulement (non livré), XML du bus D-Bus local" },
+]
+
+[licenses]
+version = 2
+# Mesurées sur le Cargo.lock réel. Toute nouvelle licence doit être examinée
+# avant d'être ajoutée ici.
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "BSL-1.0",
+    "Unicode-3.0",
+    "Unlicense",
+    # option-ext (via dirs) : copyleft faible au niveau du fichier, sans
+    # modification de notre part.
+    "MPL-2.0",
+    # webpki-roots : données des autorités de certification (Mozilla).
+    "CDLA-Permissive-2.0",
+    # Polices embarquées par l'interface du client de bureau.
+    "OFL-1.1",
+]
+confidence-threshold = 0.8
+exceptions = [
+    # Police Ubuntu embarquée par egui dans le client de bureau.
+    { crate = "epaint_default_fonts", allow = ["Ubuntu-font-1.0"] },
+]
+
+[licenses.private]
+# Crates non publiées (publish = false) : pas de contrôle de licence.
+ignore = true
+
+[bans]
+multiple-versions = "warn"
+# Jokers (« * ») : à repasser en "deny" dès que les crates du workspace
+# porteront `publish = false`. Aujourd'hui cargo-deny compte comme jokers les
+# dépendances internes `locksy-core = { path = "../locksy-core" }` : il
+# n'applique allow-wildcard-paths qu'aux crates non publiables. Aucune
+# dépendance de crates.io n'est en « * » (vérifié le 17/11/2026).
+wildcards = "warn"
+allow-wildcard-paths = true
+highlight = "all"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []

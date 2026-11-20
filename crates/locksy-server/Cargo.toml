@@ -9,7 +9,8 @@ license.workspace = true
 locksy-core = { path = "../locksy-core" }
 axum = { version = "0.7", features = ["macros"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "signal", "time", "sync", "fs"] }
-tower-http = { version = "0.6", features = ["fs", "set-header", "limit"] }
+# compression-gzip : fichiers de l'interface compressés (JS, CSS, wasm).
+tower-http = { version = "0.6", features = ["fs", "set-header", "limit", "timeout", "catch-panic", "trace", "compression-gzip"] }
 rusqlite = { version = "0.32", features = ["bundled"] }
 argon2 = "0.5"
 rand_core = { version = "0.6", features = ["getrandom"] }
@@ -19,7 +20,7 @@ subtle = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 qrcode = { version = "0.14", default-features = false, features = ["svg"] }
 zeroize = "1"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
@@ -27,4 +28,10 @@ jsonwebtoken = "9"
 url = "2"
 ldap3 = { version = "0.12", default-features = false, features = ["tls-rustls-ring"] }
 axum-server = { version = "0.7", features = ["tls-rustls-no-provider"] }
+# Délai de lecture des en-têtes (minuterie Tokio pour hyper).
+hyper-util = { version = "0.1", features = ["tokio", "server-auto"] }
 rustls = { version = "0.23", default-features = false, features = ["std", "tls12", "ring"] }
+# Autorités de certification pour le syslog TLS (déjà tirée par reqwest).
+webpki-roots = "1.0"
+# Cache des réglages effectifs, lu sans verrou à chaque requête.
+arc-swap = "1"

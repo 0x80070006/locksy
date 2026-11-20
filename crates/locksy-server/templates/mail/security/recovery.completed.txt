@@ -1,0 +1,4 @@
+Votre compte a été récupéré
+Votre compte {{org}} a été récupéré avec la clé de récupération, et un nouveau mot de passe maître a été choisi.
+
+Si vous n'êtes pas à l'origine de cette récupération, prévenez sans attendre votre administrateur.

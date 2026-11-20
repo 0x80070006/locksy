@@ -1,0 +1,75 @@
+{
+  "type": "object",
+  "properties": {
+    "server_url": {
+      "title": "Adresse du serveur Locksy",
+      "description": "Adresse imposée (https://coffre.entreprise.fr). L'utilisateur ne peut plus la modifier.",
+      "type": "string"
+    },
+    "client.autolock_minutes": {
+      "title": "Verrouillage automatique (minutes)",
+      "description": "Délai maximal sans utilisation avant le verrouillage du coffre (1 à 1440). Le plus strict du poste et de l'organisation s'applique.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1440
+    },
+    "client.clipboard_clear_seconds": {
+      "title": "Effacement du presse-papiers (secondes)",
+      "description": "Délai maximal avant l'effacement d'un mot de passe ou d'un code copié (5 à 600).",
+      "type": "integer",
+      "minimum": 5,
+      "maximum": 600
+    },
+    "client.lock_on_os_lock": {
+      "title": "Verrouiller avec la session Windows",
+      "description": "Vrai : le coffre se verrouille dès que la session Windows est verrouillée, quel que soit le choix de l'organisation.",
+      "type": "boolean"
+    },
+    "extension.http_fill": {
+      "title": "Remplissage sur les pages non chiffrées (http)",
+      "description": "« block » : jamais de remplissage sur une page http ; « warn » : remplissage avec avertissement. « block » l'emporte sur le choix de l'organisation.",
+      "type": "string",
+      "enum": ["warn", "block"]
+    },
+    "extension.allow_mismatch_fill": {
+      "title": "Remplir un compte enregistré pour un autre site",
+      "description": "Faux : un compte n'est jamais rempli sur un site qui ne correspond pas à son adresse, quel que soit le choix de l'organisation.",
+      "type": "boolean"
+    },
+    "extension.offer_save": {
+      "title": "Proposer d'enregistrer le compte saisi",
+      "description": "Affiche « Enregistrer le compte saisi sur ce site » dans la fenêtre de l'extension.",
+      "type": "boolean"
+    },
+    "extension.autofill": {
+      "title": "Remplir automatiquement à l'ouverture",
+      "description": "Quand un seul compte correspond au site ouvert, l'extension le remplit dès l'ouverture de sa fenêtre.",
+      "type": "boolean"
+    },
+    "extension.copy_totp_after_fill": {
+      "title": "Copier le code de vérification après le remplissage",
+      "description": "Après « Remplir », le code de vérification du compte est copié pour l'étape suivante.",
+      "type": "boolean"
+    },
+    "extension.excluded_sites": {
+      "title": "Sites exclus",
+      "description": "Domaines (et leurs sous-domaines) où l'extension ne remplit ni n'enregistre rien.",
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "max_auto_lock_minutes": {
+      "title": "Ancien nom de client.autolock_minutes (version 1.0)",
+      "description": "Toujours lu ; préférez client.autolock_minutes.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1440
+    },
+    "clipboard_seconds": {
+      "title": "Ancien nom de client.clipboard_clear_seconds (version 1.0)",
+      "description": "Toujours lu ; préférez client.clipboard_clear_seconds.",
+      "type": "integer",
+      "minimum": 30,
+      "maximum": 600
+    }
+  }
+}

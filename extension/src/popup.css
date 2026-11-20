@@ -1,20 +1,36 @@
-/* Fenêtre de l'extension : 380 px de large, contenu qui défile. */
-html, body { width: 380px; height: auto; min-height: 480px; }
-#app { height: auto; }
-.pop { display: grid; gap: 12px; padding: 14px; }
-.pop-head { display: flex; align-items: center; gap: 8px; }
-.pop-head .brand { flex: 1; font-size: 1rem; }
-.pop-head .brand svg { width: 24px; height: 24px; }
-.site { font-size: 0.82rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pop-list { display: grid; gap: 6px; max-height: 330px; overflow-y: auto; }
-.pop-item { display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
-.pop-item .acts { grid-column: 1 / -1; justify-content: flex-end; }
-.pop-item .icon-tile { width: 32px; height: 32px; font-size: 0.85rem; border-radius: 8px; }
-.pop-item .t { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pop-item .s { font-size: 0.8rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pop-item .acts { display: flex; gap: 2px; }
-.pop-item .acts .btn { padding: 4px 6px; min-width: 0; }
-.section-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-.pop .auth-card { box-shadow: none; padding: 0; border: 0; }
-.pop .totp-mini { font-family: var(--mono); font-size: 0.8rem; color: var(--accent); }
-.toasts { left: 12px; right: 12px; bottom: 12px; }
+/* Fenêtre de l'extension (cahier §3.5.1) : 380 px de large, contenu qui défile.
+   Composants partagés (lib/css) ; ici, seulement la mise en page du popup,
+   avec les jetons du design system (aucune couleur ni taille en dur). */
+html, body { inline-size: 380px; block-size: auto; min-block-size: 480px; }
+body { display: flex; flex-direction: column; }
+#app { block-size: auto; }
+.x-pop { display: grid; gap: var(--space-3); padding: var(--space-3) var(--space-4) var(--space-4); }
+.x-alert { position: sticky; inset-block-start: 0; z-index: 10; margin: var(--space-2) var(--space-3) 0; }
+
+.x-head { display: flex; align-items: center; gap: var(--space-2); min-block-size: var(--target-min); }
+.x-head__title { font-size: var(--text-lg); line-height: var(--leading-lg); }
+.x-head__lock { flex: 1; font-size: var(--text-sm); text-align: end; }
+.x-head__actions { display: flex; gap: var(--space-1); margin-inline-start: auto; }
+.x-head__lock + .x-head__actions { margin-inline-start: 0; }
+.x-title { font-size: var(--text-md); }
+
+.x-site { font-size: var(--text-sm); color: var(--color-text-muted); overflow-wrap: anywhere; }
+.x-form { display: grid; gap: var(--space-3); }
+.x-section { display: grid; gap: var(--space-2); }
+.x-section__title { font-size: var(--text-xs); line-height: var(--leading-xs); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-text-muted); }
+.x-section .c-item-list { max-block-size: 18rem; overflow-y: auto; }
+.x-section .c-empty { padding: var(--space-4) var(--space-3); }
+
+.x-cards { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style-type: none; max-block-size: 20rem; overflow-y: auto; }
+.x-card { display: grid; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); }
+.x-card__head { display: flex; align-items: center; gap: var(--space-3); min-inline-size: 0; }
+.x-card__text { min-inline-size: 0; }
+.x-card__name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.x-card__sub { font-size: var(--text-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.x-card__note { font-size: var(--text-sm); color: var(--color-warn); }
+.x-card__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.x-card__actions > .c-button--primary { flex: 1; }
+
+.x-nav { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); padding-block-start: var(--space-2); border-block-start: 1px solid var(--color-border); }
+.x-about { display: grid; gap: var(--space-1); padding-block-start: var(--space-3); border-block-start: 1px solid var(--color-border); font-size: var(--text-sm); overflow-wrap: anywhere; }
+.c-toasts { inset-inline: var(--space-3); inset-block-end: var(--space-3); inline-size: auto; }

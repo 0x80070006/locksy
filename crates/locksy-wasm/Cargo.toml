@@ -8,9 +8,18 @@ license.workspace = true
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[features]
+# Opérations d'import (KDBX, export JSON chiffré) : environ 320 Ko de plus.
+# `--no-default-features` donne le module principal (locksy.wasm, budget du
+# front §6.5) ; le module complet sert au Worker d'import (locksy-import.wasm).
+default = ["import"]
+import = ["dep:base64"]
+
 [dependencies]
 locksy-core = { path = "../locksy-core" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 zeroize = "1"
+base64 = { version = "0.22", optional = true } # décodage tolérant des fichiers importés
+sha2 = "0.10"
 getrandom = { version = "0.2", features = ["custom"] }

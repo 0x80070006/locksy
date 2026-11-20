@@ -1,0 +1,13 @@
+{
+  "errors.share_disabled": "Votre organisation a désactivé les liens de partage.",
+  "errors.share_limit": "Votre organisation limite les liens à {max_minutes} minutes et {max_views} ouverture(s) au plus. Choisissez une durée ou un nombre d'ouvertures plus petits.",
+  "errors.share_ended": "Ce lien n'est plus valide.",
+  "errors.rekey_required": "La clé de ce coffre vient d'être renouvelée. Rechargez le coffre puis enregistrez de nouveau.",
+  "errors.personal_vault_disabled": "Votre organisation a désactivé l'espace personnel : rangez cet élément dans un coffre partagé.",
+  "errors.shared_vault_creation_disabled": "Dans votre organisation, seuls les administrateurs créent les coffres partagés. Demandez-leur d'en créer un.",
+  "errors.attachments_disabled": "Votre organisation a désactivé l'ajout de pièces jointes.",
+  "errors.attachment_too_large": "Ce fichier est trop volumineux pour être joint.",
+  "errors.attachment_limit": "Cet élément a atteint le nombre maximal de pièces jointes. Supprimez-en une avant d'en ajouter une autre.",
+  "errors.item_not_shareable": "Cet élément ne peut pas être partagé par lien.",
+  "errors.password_used_by_colleague": "Ce mot de passe est déjà utilisé par un autre compte de votre organisation. Choisissez-en un différent."
+}

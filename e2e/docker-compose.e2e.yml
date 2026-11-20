@@ -1,0 +1,148 @@
+# Environnement des tests de bout en bout (Playwright). À lancer par
+# e2e/tools/run.sh, qui fournit le nom de projet (-p <cle>) et les variables.
+#
+# Aucun port n'est publié sur l'hôte : le lanceur Playwright (service « runner »)
+# est sur le même réseau compose et joint les serveurs par leur nom. Plusieurs
+# exécutions simultanées sont donc possibles, chacune sous sa propre clé.
+#
+#   locksy        http://locksy:8743        organisation amorcée par la fixture « org »
+#   locksy-fresh  http://locksy-fresh:8743  serveur neuf, pour l'installation (smoke)
+#   dex           http://dex:5556/dex       profil « sso »  (connexion d'entreprise OIDC)
+#   samba         ldap://samba, ldaps://samba  profil « ldap » (Active Directory E2E.LOCAL)
+#   mailpit       http://mailpit:8025, smtp://mailpit:1025  profil « mail »
+
+name: ${E2E_KEY:-locksy-e2e}
+
+# Sobriété : chaque service est borné à 2 processeurs et 2 Go (poste partagé).
+x-limits: &limits
+  deploy:
+    resources:
+      limits:
+        cpus: "2"
+        memory: 2g
+
+x-locksy: &locksy
+  <<: *limits
+  # Image superposée par run.sh : serveur de base + web/ du dépôt.
+  image: ${LOCKSY_E2E_IMAGE:-locksy-e2e-web:local}
+  read_only: true
+  tmpfs:
+    - /tmp
+    # Base neuve à chaque démarrage, propriété de l'utilisateur 10001 de l'image.
+    - /data:uid=10001,gid=10001,mode=0700
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  environment:
+    LOCKSY_SETUP_TOKEN: e2e-jeton-installation-0123456789
+    LOCKSY_TRUST_PROXY: "true"
+    # Le lanceur est sur un réseau privé Docker : son X-Forwarded-For est cru,
+    # ce qui donne une adresse distincte par test face au limiteur.
+    LOCKSY_TRUSTED_PROXIES: 10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+    LOCKSY_ENV: test
+    LOCKSY_SSO_ALLOW_HTTP: ${LOCKSY_SSO_ALLOW_HTTP:-false}
+    RUST_LOG: warn
+  healthcheck:
+    # Plus serré que celui de l'image (30 s) : « up --wait » rend la main vite.
+    test: ["CMD", "/app/locksy-server", "healthcheck"]
+    interval: 2s
+    timeout: 5s
+    retries: 30
+    start_period: 60s
+
+services:
+  locksy:
+    <<: *locksy
+
+  locksy-fresh:
+    <<: *locksy
+
+  runner:
+    <<: *limits
+    image: mcr.microsoft.com/playwright:v1.49.1-noble
+    profiles: [runner]
+    init: true
+    shm_size: 1gb
+    working_dir: /work/e2e
+    volumes:
+      - ../:/work
+      # node_modules propre au projet compose : deux exécutions simultanées ne
+      # se marchent pas dessus (supprimé par « down -v »).
+      - node_modules:/work/e2e/node_modules
+      - ldap-ca:/ldap-ca:ro
+    environment:
+      E2E_KEY: ${E2E_KEY:-locksy-e2e}
+      BASE_URL: http://locksy:8743
+      FRESH_URL: http://locksy-fresh:8743
+      DEX_URL: http://dex:5556/dex
+      MAILPIT_URL: http://mailpit:8025
+      LDAP_URL: ldap://samba:389
+      LDAPS_URL: ldaps://samba:636
+      LDAP_CA_FILE: /ldap-ca/ca.pem
+      E2E_PROFILES: ${E2E_PROFILES:-}
+      E2E_WASM: ${E2E_WASM:-}
+      E2E_WORKERS: ${E2E_WORKERS:-}
+      EXT_PATH: ${EXT_PATH:-}
+      npm_config_cache: /work/e2e/.npm-cache
+      npm_config_update_notifier: "false"
+      CI: ${CI:-}
+    entrypoint: ["bash", "/work/e2e/tools/runner.sh"]
+
+  # ---------------------------------------------------------------- profil sso
+  dex:
+    <<: *limits
+    image: ghcr.io/dexidp/dex:v2.41.1
+    profiles: [sso]
+    command: ["dex", "serve", "/etc/dex/config.yaml"]
+    volumes:
+      - ./fixtures/dex/config.yaml:/etc/dex/config.yaml:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:5558/healthz/ready"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  # --------------------------------------------------------------- profil ldap
+  samba:
+    <<: *limits
+    image: nowsci/samba-domain:latest
+    profiles: [ldap]
+    hostname: dc1
+    # Le provisionnement d'un contrôleur Active Directory pose des ACL POSIX et
+    # des attributs étendus : impossible sans privilèges dans Docker Desktop.
+    privileged: true
+    environment:
+      DOMAIN: E2E.LOCAL
+      DOMAIN_DC: dc=e2e,dc=local
+      DOMAINPASS: E2e-Annuaire-Admin-2026
+      NOCOMPLEXITY: "true"
+      # Liaison simple autorisée sur ldap:// (389) pour les tests ; ldaps:// (636)
+      # reste disponible avec le certificat auto-signé du domaine.
+      INSECURELDAP: "true"
+    entrypoint: ["bash", "/e2e/start.sh"]
+    volumes:
+      - ./fixtures/ldap:/e2e:ro
+      - ldap-ca:/ldap-ca
+    healthcheck:
+      test: ["CMD", "test", "-f", "/tmp/e2e-pret"]
+      interval: 3s
+      timeout: 3s
+      retries: 60
+      start_period: 180s
+
+  # --------------------------------------------------------------- profil mail
+  mailpit:
+    <<: *limits
+    image: axllent/mailpit:v1.20.0
+    profiles: [mail]
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "true"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  node_modules:
+  ldap-ca:

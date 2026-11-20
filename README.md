@@ -28,7 +28,7 @@ de l'utilisateur (navigateur, client Windows ou extension), avec le même noyau 
   </tr>
   <tr>
     <td><img src="docs/images/partage.png" alt="Gestion des membres d'un coffre partagé"><br><sub><b>Partage</b> : rôles, empreintes de clé, renouvellement de clé au retrait</sub></td>
-    <td><img src="docs/images/sante.png" alt="Santé des mots de passe"><br><sub><b>Santé des mots de passe</b>, calculée sur le poste</sub></td>
+    <td><img src="docs/images/sante.png" alt="Bilan de sécurité"><br><sub><b>Bilan de sécurité</b>, calculé sur le poste</sub></td>
   </tr>
   <tr>
     <td><img src="docs/images/administration.png" alt="Vue d'ensemble de l'administration"><br><sub><b>Administration</b> : vue d'ensemble et derniers événements</sub></td>
@@ -44,23 +44,31 @@ de l'utilisateur (navigateur, client Windows ou extension), avec le même noyau 
   </tr>
 </table>
 
-<sub>Captures réalisées sur un serveur de démonstration, avec des données fictives.</sub>
+<sub>Captures de la version 1.0, réalisées sur un serveur de démonstration avec des données
+fictives. L'interface web et l'administration ont été redessinées en 1.1 ; les captures seront
+renouvelées.</sub>
 
 ## Points forts
 
 - **Chiffrement** : Argon2id (64 Mio), XChaCha20-Poly1305, X25519, HKDF-SHA256 ; chaque donnée
   chiffrée est liée à sa place (le serveur ne peut ni la déplacer ni l'échanger).
-- **Coffres partagés** avec rôles (gestionnaire, éditeur, lecteur) ; retirer quelqu'un renouvelle
-  la clé du coffre et rechiffre tout son contenu.
+- **Coffres partagés** avec droits (gère le coffre, peut modifier, peut voir) ; au retrait d'un
+  membre, la clé du coffre est renouvelée et tout son contenu rechiffré (exigé, proposé ou
+  laissé au gestionnaire, selon l'organisation).
 - **Active Directory sur site** (LDAPS) : synchronisation d'un groupe, connexion avec le compte
   Windows, **coupure immédiate** d'un compte désactivé dans l'AD. Aucun service cloud requis.
 - **SSO OpenID Connect** (ADFS, Entra ID, Okta, Keycloak…) et **provisionnement SCIM 2.0**.
-- Identifiants, notes, cartes, identités, clés SSH, **codes 2FA intégrés**, **pièces jointes
-  chiffrées**, historique des mots de passe, corbeille, générateur, santé des mots de passe.
-- **Liens de partage externes** à usage limité, chiffrés de bout en bout.
-- **Administration** sans accès aux secrets : comptes, invitations, double authentification
-  imposable, journal d'audit complet (export CSV, envoi Syslog vers votre SIEM).
-- **Client Windows** natif et **extension** de navigateur avec remplissage des formulaires.
+- Mots de passe, notes, cartes, identités, clés SSH, **codes de vérification intégrés**,
+  **pièces jointes chiffrées**, historique des mots de passe, corbeille, générateur, **Bilan de
+  sécurité**.
+- **Liens sécurisés** à durée et nombre d'ouvertures limités, chiffrés de bout en bout.
+- **Imports** CSV, KeePass (KDBX) et Bitwarden (JSON), lus dans le navigateur.
+- **Administration** sans accès aux secrets : personnes, invitations, départ d'un collaborateur,
+  double authentification imposable avec codes de secours, **tous les réglages modifiables**
+  depuis un registre unique, journal chaîné et vérifiable (export CSV, envoi Syslog vers votre
+  SIEM), e-mails et notifications.
+- **Extension** de navigateur avec remplissage protégé, déployable par GPO ou Intune, et
+  **client Windows** natif (sa refonte arrive en 1.2).
 
 ## Installation du serveur
 
@@ -70,37 +78,43 @@ Sur une VM Linux (Debian, Ubuntu, RHEL…), en une commande :
 curl -fsSL https://github.com/0x80070006/locksy/releases/latest/download/install.sh | sudo bash
 ```
 
-Le script propose deux modes : **service systemd** (sans Docker) ou **conteneur Docker**. Il
-installe un certificat temporaire ou le vôtre (`--cert`, `--key`), démarre Locksy en HTTPS et
-vérifie qu'il répond. Pour un réseau isolé, copiez `install.sh` et
-`locksy-server-linux-x86_64.tar.gz` depuis la [dernière version](https://github.com/0x80070006/locksy/releases/latest) :
+Le script propose deux modes : **service systemd** durci (sans Docker) ou **conteneur
+Docker**. Il vérifie l'empreinte et la signature de la version, installe un certificat
+temporaire ou le vôtre (`--cert`, `--key`), démarre Locksy en HTTPS, vérifie qu'il répond et
+programme une sauvegarde quotidienne. Pour un réseau isolé, copiez `install.sh`,
+`locksy-server-linux-x86_64.tar.gz`, `SHA256SUMS` et ses signatures depuis la
+[dernière version](https://github.com/0x80070006/locksy/releases/latest) :
 
 ```bash
 sudo bash install.sh --archive locksy-server-linux-x86_64.tar.gz --domain locksy.corp.local \
   --cert locksy.crt --key locksy.key
 ```
 
-Ouvrez ensuite `https://locksy.corp.local` : **le premier compte créé devient propriétaire.**
+Ouvrez ensuite `https://locksy.corp.local` et saisissez le **jeton d'installation** affiché à la
+fin du script : le premier compte créé avec lui devient **propriétaire**.
 
 Pour essayer sur un poste avec Docker Desktop : `docker compose up -d --build`, puis
-<http://localhost:8743>.
+<http://localhost:8743> (jeton : `docker exec locksy cat /data/setup-token`).
 
 ## Postes de travail
 
 | Composant | Fichier de la version | Installation |
 |---|---|---|
-| Client Windows | `locksy-windows-x64.exe` + `install-client.ps1` | `powershell -ExecutionPolicy Bypass -File install-client.ps1 -Server https://locksy.corp.local`, ou par GPO |
-| Extension Edge / Chrome | `locksy-extension.zip` | mode développeur > « Charger l'extension non empaquetée », ou installation forcée par GPO |
+| Client Windows | `locksy-windows-x64.exe` + `install-client.ps1` + `SHA256SUMS` | `powershell -NoProfile -File .\install-client.ps1 -Server https://locksy.corp.local`, ou par GPO ; la version 1.1 garde son interface, sa refonte arrive en 1.2 |
+| Extension Edge / Chrome | `locksy-extension.zip` | mode développeur > « Charger l'extension non empaquetée », ou installation imposée par GPO ou Intune ([guide](docs/Extension-navigateur.md#déploiement-sur-les-postes)) |
 | Interface web | — | tout navigateur récent ; installable comme application |
 
 ## Documentation
 
-Tout est dans le dossier **[docs](docs/README.md)** :
+Tout est dans le dossier **[docs](docs/README.md)**. Pour commencer : le
+**[guide utilisateur](docs/Guide-utilisateur.md)**, le **[guide administrateur](docs/Administration.md)**
+et la liste des **[réglages de l'organisation](docs/Reglages.md)**.
 
 - [Installation du serveur](docs/Installation-du-serveur.md) · [Déploiement sur site avec Active Directory](docs/Deploiement-Active-Directory.md)
-- [Chiffrement et modèle de sécurité](docs/Chiffrement-et-securite.md)
-- [Fonctionnalités](docs/Fonctionnalites.md) · [Administration](docs/Administration.md) · [Client Windows](docs/Client-Windows.md) · [Extension](docs/Extension-navigateur.md)
+- [Chiffrement et modèle de sécurité](docs/Chiffrement-et-securite.md) · [Modèle de sécurité et limites](SECURITE.md) · [Signaler une vulnérabilité](SECURITY.md)
+- [Fonctionnalités](docs/Fonctionnalites.md) · [Guide utilisateur](docs/Guide-utilisateur.md) · [Guide administrateur](docs/Administration.md) · [Réglages](docs/Reglages.md) · [Client Windows](docs/Client-Windows.md) · [Extension](docs/Extension-navigateur.md)
 - [SSO et SCIM](docs/SSO-et-SCIM.md) · [Sauvegarde et mises à jour](docs/Sauvegarde-et-mises-a-jour.md) · [API](docs/API.md) · [Développement](docs/Developpement.md) · [FAQ](docs/FAQ.md)
+- [Exploitation](docs/Exploitation.md) · [PRA/PCA](docs/PRA-PCA.md) · [RGPD](docs/RGPD.md) · [Journal des modifications](CHANGELOG.md)
 
 ## Construire depuis les sources
 
@@ -113,9 +127,11 @@ s'exécutent pendant la construction. Détails : [Développement](docs/Developpe
 
 ## Sécurité
 
-Modèle cryptographique détaillé : [Chiffrement et sécurité](docs/Chiffrement-et-securite.md) et [SECURITE.md](SECURITE.md). Pour signaler une
-vulnérabilité, voir [SECURITY.md](SECURITY.md). Locksy n'a pas encore fait l'objet d'un audit
-externe.
+Modèle de sécurité et limites connues : [SECURITE.md](SECURITE.md) ; détail cryptographique :
+[Chiffrement et sécurité](docs/Chiffrement-et-securite.md). Les versions sont signées (cosign,
+minisign en option), accompagnées de SBOM et d'attestations de provenance. Pour signaler une
+vulnérabilité ou vérifier une version, voir [SECURITY.md](SECURITY.md). Locksy n'a pas encore
+fait l'objet d'un audit externe.
 
 ## Licence
 

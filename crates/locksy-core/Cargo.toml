@@ -20,3 +20,23 @@ base64 = "0.22"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 unicode-normalization = "0.1"
+
+# Import de coffres (module import/) : KDBX 3.1 et 4, export JSON chiffré.
+# Crates RustCrypto et rust-lang maintenues, compilables en wasm32, sans code C.
+aes = { version = "0.8", default-features = false }
+cbc = { version = "0.1", default-features = false, features = ["block-padding"] }
+chacha20 = { version = "0.9", default-features = false }
+salsa20 = { version = "0.10", default-features = false }
+pbkdf2 = { version = "0.12", default-features = false, features = ["hmac"] }
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+quick-xml = { version = "0.41", default-features = false }
+
+# Micro-benchmarks (benches/core.rs). Exclu de Windows avec la toolchain GNU : windows-sys,
+# tiré par criterion, y exige dlltool, absent des postes de développement, ce qui casserait
+# « cargo test -p locksy-core » en natif. La référence se mesure dans locksy-toolchain (Linux).
+[target.'cfg(not(all(windows, target_env = "gnu")))'.dev-dependencies]
+criterion = { version = "0.5", default-features = false, features = ["cargo_bench_support"] }
+
+[[bench]]
+name = "core"
+harness = false

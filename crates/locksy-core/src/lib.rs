@@ -9,12 +9,15 @@
 #![deny(missing_debug_implementations)]
 
 pub mod aad;
+pub mod admin_api;
 pub mod api;
 pub mod crypto;
 pub mod encoding;
 pub mod error;
 pub mod generator;
+pub mod import;
 pub mod model;
+pub mod settings;
 pub mod strength;
 pub mod totp;
 

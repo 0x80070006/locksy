@@ -1,0 +1,12 @@
+Nouvelle connexion à votre compte {{org}}
+
+Bonjour,
+
+Votre compte vient d'être utilisé depuis un appareil qui ne s'était jamais connecté :
+
+Date : {{date}}
+Appareil : {{device}}
+Adresse IP : {{ip}}
+
+Si c'est vous, vous n'avez rien à faire.
+Sinon, changez tout de suite votre mot de passe maître et prévenez votre administrateur.

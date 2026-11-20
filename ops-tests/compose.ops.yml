@@ -1,0 +1,49 @@
+# Serveur Locksy des recettes d'exploitation (ops-tests/README.md).
+#
+# Toujours lancé avec un nom de projet propre (-p q5-ops-…) par ops-tests/lib.sh,
+# qui le supprime (down -v) à la fin du script. Mêmes limites que le profil
+# REF-PROD du banc (bench/docker-compose.bench.yml) : on mesure ce qu'on livre.
+# Différences avec le banc :
+# - aucun sous-réseau ni adresse fixes (plusieurs projets coexistent) ;
+# - RUST_LOG=info : le journal des migrations du schéma est lisible ;
+# - image, mémoire et réinitialisation de la clé serveur passées par variables
+#   (OPS_SERVEUR_IMAGE, OPS_MEM : 512m par défaut ou 1g, OPS_KEY_RESET).
+# Une image 1.0.0 ignore les variables qu'elle ne connaît pas.
+
+services:
+  locksy:
+    image: ${OPS_SERVEUR_IMAGE:-locksy-e2e-server:fast}
+    cpus: 2
+    mem_limit: ${OPS_MEM:-512m}
+    memswap_limit: ${OPS_MEM:-512m}
+    pids_limit: 128
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      # Les vérifications partent du poste par le port publié : chaque compte
+      # annonce sa propre adresse, comme sur le banc.
+      LOCKSY_TRUST_PROXY: "true"
+      LOCKSY_TRUSTED_PROXIES: 10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+      LOCKSY_SETUP_TOKEN: ops-jeton-installation-0123456789
+      LOCKSY_SERVER_KEY_RESET: ${OPS_KEY_RESET:-false}
+      RUST_LOG: info
+    volumes:
+      - data:/data
+    # Port hôte aléatoire, sur la boucle locale seulement.
+    ports:
+      - "127.0.0.1::8743"
+    healthcheck:
+      test: ["CMD", "/app/locksy-server", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+      start_interval: 1s
+
+volumes:
+  data:

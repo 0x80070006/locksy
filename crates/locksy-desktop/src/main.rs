@@ -9,8 +9,12 @@
 
 mod app;
 mod client;
+mod clip;
 mod config;
 mod sso;
+// Jetons du design system générés par tools/gen-tokens.mjs ; déclarés dès
+// maintenant pour rester compilés, branchés sur le thème par le lot L15.
+mod theme_tokens;
 mod vault;
 
 use eframe::egui;

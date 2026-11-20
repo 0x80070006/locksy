@@ -3,11 +3,11 @@
   "short_name": "Locksy",
   "description": "Gestionnaire de mots de passe de l'entreprise",
   "lang": "fr",
-  "start_url": "/#/vault",
+  "start_url": "/#/accueil",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#0f151c",
-  "theme_color": "#1b6b5f",
+  "background_color": "#0a1413",
+  "theme_color": "#0a3a35",
   "icons": [
     {
       "src": "/icons/192.png",

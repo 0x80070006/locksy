@@ -1,0 +1,17 @@
+Résumé {{period}} de sécurité, {{org}}
+
+Bonjour,
+
+Voici les événements de sécurité du {{from}} au {{to}}.
+
+Échecs de connexion : {{?login_failed}}
+Comptes bloqués après trop d'essais : {{?login_locked}}
+Doubles authentifications retirées ou réinitialisées : {{?twofa_removed}}
+Comptes récupérés avec la clé de récupération : {{?recovered}}
+Changements de rôle : {{?role_changes}}
+Réglages de sécurité abaissés : {{?settings_lowered}}
+E-mails non distribués : {{?mail_failed}}
+Vérifications du journal en échec : {{?audit_failed}}
+Administrateurs sans double authentification : {{?admins_without_2fa}}
+
+Le détail se trouve dans le journal de l'administration.

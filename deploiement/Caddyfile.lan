@@ -1,0 +1,24 @@
+# HTTPS pour un usage sur le réseau local, avec l'autorité interne de Caddy
+# (tls internal). Le certificat racine est à installer sur chaque poste :
+#   docker compose cp proxy:/data/caddy/pki/authorities/local/root.crt ./caddy-root.crt
+{
+	auto_https disable_redirects
+	# Sans SNI (accès par adresse IP), Caddy ne voit que l'IP interne du conteneur :
+	# on force le certificat de l'adresse du poste.
+	default_sni 10.20.2.134
+}
+
+https://10.20.2.134, https://localhost {
+	tls internal
+	header {
+		Strict-Transport-Security "max-age=63072000"
+		defer
+	}
+	request_body {
+		max_size 20MB
+	}
+	reverse_proxy locksy:8743 {
+		header_up X-Forwarded-For {remote_host}
+		header_down -Strict-Transport-Security
+	}
+}

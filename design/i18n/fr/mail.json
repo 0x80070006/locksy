@@ -1,0 +1,18 @@
+{
+  "mail.kind.invite": "Invitation",
+  "mail.kind.new_device": "Connexion depuis un nouvel appareil",
+  "mail.kind.security_change": "Alerte de sécurité",
+  "mail.kind.settings_lowered": "Réglages de sécurité abaissés",
+  "mail.kind.admin_digest": "Résumé des administrateurs",
+  "mail.kind.test": "E-mail de test",
+  "mail.status.pending": "En attente",
+  "mail.status.sending": "Envoi en cours",
+  "mail.status.sent": "Envoyé",
+  "mail.status.failed": "Échec",
+  "mail.error_code.smtp_connect": "Le serveur d'envoi est injoignable. Vérifiez son adresse, son port et le pare-feu.",
+  "mail.error_code.smtp_tls": "La connexion chiffrée au serveur d'envoi a échoué. Vérifiez le mode de chiffrement et le certificat du serveur.",
+  "mail.error_code.smtp_auth": "Le serveur d'envoi a refusé l'identifiant ou le mot de passe. Saisissez-les de nouveau.",
+  "mail.error_code.smtp_rejected": "Le serveur d'envoi a refusé le message. Vérifiez l'adresse d'expédition et celle du destinataire.",
+  "mail.error_code.smtp_timeout": "Le serveur d'envoi n'a pas répondu à temps. Réessayez dans quelques minutes.",
+  "mail.error_code.smtp_insecure": "Un envoi sans chiffrement n'est permis que vers un serveur du réseau interne. Choisissez STARTTLS ou TLS."
+}

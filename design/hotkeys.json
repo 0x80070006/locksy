@@ -1,0 +1,13 @@
+[
+  { "id": "search.focus", "keys": ["Ctrl+K", "/"], "scope": "global", "labelKey": "ui.hotkeys.search_focus", "singleKey": false },
+  { "id": "lock", "keys": ["Ctrl+Alt+L"], "scope": "global", "labelKey": "ui.hotkeys.lock", "singleKey": false },
+  { "id": "help", "keys": ["?"], "scope": "global", "labelKey": "ui.hotkeys.help", "singleKey": true },
+  { "id": "dialog.close", "keys": ["Escape"], "scope": "global", "labelKey": "ui.hotkeys.close", "singleKey": false },
+  { "id": "item.new", "keys": ["N"], "scope": "vault", "labelKey": "ui.hotkeys.item_new", "singleKey": true },
+  { "id": "item.copy_password", "keys": ["Ctrl+Shift+C"], "scope": "vault", "labelKey": "ui.hotkeys.copy_password", "singleKey": false },
+  { "id": "item.copy_username", "keys": ["Ctrl+Shift+U"], "scope": "vault", "labelKey": "ui.hotkeys.copy_username", "singleKey": false },
+  { "id": "list.move", "keys": ["ArrowUp", "ArrowDown", "Home", "End"], "scope": "list", "labelKey": "ui.hotkeys.list_move", "singleKey": false },
+  { "id": "list.jump", "keys": ["Letter"], "scope": "list", "labelKey": "ui.hotkeys.list_jump", "singleKey": false },
+  { "id": "list.open", "keys": ["Enter"], "scope": "list", "labelKey": "ui.hotkeys.list_open", "singleKey": false },
+  { "id": "editor.save", "keys": ["Ctrl+Enter", "Ctrl+S"], "scope": "editor", "labelKey": "ui.hotkeys.save", "singleKey": false }
+]

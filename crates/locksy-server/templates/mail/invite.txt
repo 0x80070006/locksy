@@ -1,0 +1,12 @@
+Invitation à rejoindre {{org}}
+
+{{greeting}}
+
+{{inviter}} vous invite à rejoindre {{org}}, le gestionnaire de mots de passe de votre organisation.
+
+Pour créer votre compte, ouvrez ce lien :
+{{link}}
+
+Ce lien vous est personnel : ne le transférez pas. Il expire le {{expires}}.
+
+Si vous n'attendiez pas cette invitation, ignorez simplement ce message.

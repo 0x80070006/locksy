@@ -1,0 +1,13 @@
+# Exceptions de Trivy pour l'image Docker (job « docker » de ci.yml).
+# Chaque ligne : identifiant, date d'expiration (exp:), puis la justification
+# en commentaire. À l'expiration, Trivy signale de nouveau la faille et la CI
+# échoue : il faut alors corriger ou rejustifier. L'objectif est un fichier vide.
+
+# zlib1g 1:1.3.dfsg+really1.3.1-1+b1 de l'image de base
+# debian:trixie-20261104-slim (la plus récente au 17/11/2026), corrigé en
+# +deb13u1. Non atteignable : locksy-server n'est pas lié à zlib (ldd : libc,
+# libm, libgcc_s seulement) ; seuls dpkg/apt l'utilisent, jamais lancés à
+# l'exécution. Retrait : dès qu'une image debian:trixie-AAAAMMJJ-slim contient
+# +deb13u1, monter l'image (tag + empreinte) dans Dockerfile ET dans le
+# Dockerfile généré par install.sh, puis supprimer cette ligne.
+CVE-2026-85091 exp:2026-12-31

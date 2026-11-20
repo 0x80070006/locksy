@@ -5,6 +5,7 @@ use serde::Serialize;
 use std::sync::Arc;
 use std::time::Duration;
 use locksy_core::api::ErrorBody;
+use zeroize::Zeroizing;
 
 #[derive(Debug, Clone)]
 pub struct ApiError {
@@ -31,7 +32,19 @@ pub type ApiResult<T> = Result<T, ApiError>;
 pub struct Client {
     base: String,
     agent: ureq::Agent,
-    pub token: Option<String>,
+    /// Jeton de session, effacé de la mémoire quand le client est libéré.
+    pub token: Option<Zeroizing<String>>,
+}
+
+/// Message affiché quand une réponse d'erreur n'a pas de corps JSON (elle
+/// vient alors en général d'un proxy ou d'un répartiteur de charge).
+pub fn fallback_message(status: u16) -> String {
+    match status {
+        413 => "Envoi trop volumineux pour le serveur.".into(),
+        408 | 504 => "La requête a expiré. Réessayez.".into(),
+        502 | 503 => "Serveur momentanément indisponible. Réessayez dans quelques secondes.".into(),
+        _ => format!("Erreur du serveur ({status})."),
+    }
 }
 
 /// Refuse le HTTP en clair sauf vers ce poste lui-même.
@@ -75,7 +88,8 @@ impl Client {
     fn request(&self, method: &str, path: &str) -> ureq::Request {
         let mut r = self.agent.request(method, &format!("{}/api{}", self.base, path));
         if let Some(t) = &self.token {
-            r = r.set("Authorization", &format!("Bearer {t}"));
+            let header = Zeroizing::new(format!("Bearer {}", t.as_str()));
+            r = r.set("Authorization", &header);
         }
         r
     }
@@ -87,7 +101,7 @@ impl Client {
                 let body: Option<ErrorBody> = r.into_json().ok();
                 Err(match body {
                     Some(b) => ApiError { status, code: b.error, message: b.message },
-                    None => ApiError { status, code: "http".into(), message: format!("Erreur du serveur ({status}).") },
+                    None => ApiError { status, code: "http".into(), message: fallback_message(status) },
                 })
             }
             Err(ureq::Error::Transport(t)) => Err(ApiError {
@@ -119,7 +133,17 @@ impl Client {
 
 #[cfg(test)]
 mod tests {
-    use super::validate_server_url;
+    use super::{fallback_message, validate_server_url};
+
+    #[test]
+    fn messages_without_json_body() {
+        assert_eq!(fallback_message(413), "Envoi trop volumineux pour le serveur.");
+        assert_eq!(fallback_message(408), "La requête a expiré. Réessayez.");
+        assert_eq!(fallback_message(504), "La requête a expiré. Réessayez.");
+        assert_eq!(fallback_message(502), "Serveur momentanément indisponible. Réessayez dans quelques secondes.");
+        assert_eq!(fallback_message(503), fallback_message(502));
+        assert_eq!(fallback_message(500), "Erreur du serveur (500).");
+    }
 
     #[test]
     fn only_https_or_local_http() {

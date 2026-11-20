@@ -1,0 +1,11 @@
+{
+  "errors.reauth_invalid": "Confirmation expirée ou déjà utilisée. Confirmez de nouveau votre identité pour continuer.",
+  "errors.kdf_too_weak": "La protection de votre mot de passe maître est trop faible pour la politique de l'organisation. Mettez à jour l'application puis recommencez.",
+  "errors.domain_not_allowed": "Cette adresse e-mail n'appartient pas à un domaine autorisé par votre organisation.",
+  "errors.account_expired": "L'accès de ce compte a expiré. Contactez votre administrateur pour le prolonger.",
+  "errors.password_changed_concurrently": "Votre mot de passe maître vient d'être modifié depuis un autre appareil. Reconnectez-vous puis recommencez.",
+  "errors.recovery_already_used": "Cette procédure de récupération a déjà servi. Recommencez la récupération depuis le début.",
+  "errors.totp_not_enabled": "La double authentification n'est pas activée sur ce compte. Activez-la d'abord.",
+  "errors.export_disabled": "Votre organisation a désactivé l'export des coffres.",
+  "errors.totp_unreadable": "Votre double authentification doit être réactivée : la clé du serveur a changé. Demandez à un administrateur de la réinitialiser."
+}

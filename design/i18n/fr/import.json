@@ -1,0 +1,34 @@
+{
+  "import.format.kdbx": "Base KeePass (.kdbx)",
+  "import.format.kdbx_hint": "Fichier .kdbx aux formats 3.1 ou 4. Saisissez le mot de passe de la base et, s'il y en a un, choisissez son fichier clé.",
+  "import.format.bitwarden_json": "Export Bitwarden (.json)",
+  "import.format.bitwarden_json_hint": "Export au format .json, protégé par un mot de passe ou non chiffré. Saisissez le mot de passe choisi lors de l'export.",
+  "import.field.password": "Mot de passe du fichier",
+  "import.field.keyfile": "Fichier clé (facultatif)",
+
+  "import.progress.kdf": "Vérification du mot de passe…",
+  "import.progress.decrypt": "Déchiffrement du fichier…",
+  "import.progress.parse": "Lecture des éléments…",
+  "import.progress.map": "Préparation de l'aperçu…",
+
+  "import.error.wrong_password": "Mot de passe ou fichier clé incorrect. Vérifiez la saisie (majuscules, disposition du clavier) et le fichier clé, puis réessayez.",
+  "import.error.unsupported_format": "Ce fichier n'est pas reconnu. Vérifiez le format choisi ; un export chiffré doit être protégé par un mot de passe d'export.",
+  "import.error.unsupported_version": "Cette version du format n'est pas prise en charge. Enregistrez la base au format KDBX 4 dans votre logiciel, puis réessayez.",
+  "import.error.unsupported_cipher": "Ce fichier utilise un chiffrement non pris en charge. Choisissez AES-256 ou ChaCha20 dans votre logiciel, enregistrez, puis réessayez.",
+  "import.error.unsupported_kdf": "Ce fichier utilise une protection du mot de passe non prise en charge. Choisissez Argon2 ou AES-KDF dans votre logiciel, enregistrez, puis réessayez.",
+  "import.error.kdf_out_of_bounds": "La protection de ce fichier demande trop de mémoire ou de calcul pour être ouverte ici. Allégez-la dans votre logiciel, enregistrez, puis réessayez.",
+  "import.error.corrupt": "Ce fichier est incomplet ou endommagé. Exportez de nouveau le coffre d'origine, puis réessayez.",
+  "import.error.integrity": "Ce fichier a été modifié ou endommagé : son contrôle d'intégrité a échoué. Rien n'a été importé : reprenez une copie intacte du fichier, puis réessayez.",
+  "import.error.too_large": "Ce fichier est trop volumineux pour être importé. Retirez-en les pièces jointes les plus lourdes, puis réessayez.",
+  "import.error.keyfile_required": "Cette base demande un mot de passe ou un fichier clé. Saisissez son mot de passe ou choisissez son fichier clé.",
+  "import.error.worker_failed": "L'import s'est interrompu. Fermez d'autres onglets pour libérer de la mémoire, puis réessayez.",
+
+  "import.warning.trash_skipped": "Les éléments de la corbeille n'ont pas été importés.",
+  "import.warning.attachments_skipped": { "one": "{n} élément a une pièce jointe qui n'a pas été importée : ajoutez-la à la main.", "other": "{n} éléments ont des pièces jointes qui n'ont pas été importées : ajoutez-les à la main." },
+  "import.warning.missing_title": { "one": "{n} élément n'a pas de nom : donnez-lui un nom après l'import.", "other": "{n} éléments n'ont pas de nom : donnez-leur un nom après l'import." },
+  "import.warning.item_type_unsupported": "Certains éléments d'un type inconnu n'ont pas été importés.",
+  "import.warning.linked_field_skipped": { "one": "{n} élément a un champ lié à un autre champ : ce lien n'a pas été repris.", "other": "{n} éléments ont des champs liés à d'autres champs : ces liens n'ont pas été repris." },
+  "import.warning.passkeys_skipped": { "one": "{n} élément a une clé d'accès (passkey) qui n'a pas été importée.", "other": "{n} éléments ont des clés d'accès (passkeys) qui n'ont pas été importées." },
+  "import.warning.multiple_collections": { "one": "{n} élément était rangé dans plusieurs collections : seule la première a été gardée.", "other": "{n} éléments étaient rangés dans plusieurs collections : seule la première a été gardée." },
+  "import.warning.history_truncated": { "one": "{n} élément avait un long historique de mots de passe : seuls les plus récents ont été gardés.", "other": "{n} éléments avaient un long historique de mots de passe : seuls les plus récents ont été gardés." }
+}

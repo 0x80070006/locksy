@@ -20,5 +20,10 @@ serde_json = "1"
 zeroize = "1"
 dirs = "5"
 
+# Propres à Windows : politique machine (registre HKLM) et dialogue « Enregistrer sous ».
+[target.'cfg(windows)'.dependencies]
+winreg = "0.55"
+rfd = { version = "0.15", default-features = false }
+
 [build-dependencies]
 winresource = "0.1"

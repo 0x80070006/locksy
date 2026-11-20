@@ -1,0 +1,14 @@
+# syntax=docker/dockerfile:1
+# Superposition rapide de web/ sur une image serveur Locksy (quelques secondes).
+# Contexte de construction : le dossier web/ du dépôt (voir run.sh).
+#   docker build -f e2e/tools/Dockerfile.web --build-arg BASE=locksy-e2e-server:local -t locksy-e2e-web:<cle> web
+# L'ancien contenu de /app/web est retiré (un fichier supprimé du dépôt ne
+# survit pas), sauf locksy.wasm et locksy-import.wasm, compilés dans l'image
+# de base. Le fichier Dockerfile.web.dockerignore exclut web/tests, comme le
+# Dockerfile du dépôt.
+ARG BASE=locksy-e2e-server:local
+FROM ${BASE}
+USER root
+RUN find /app/web -mindepth 1 ! -name locksy.wasm ! -name locksy-import.wasm -delete
+COPY . /app/web/
+USER locksy

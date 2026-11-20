@@ -1,16 +1,25 @@
 //! Interface du client de bureau (egui).
+//!
+//! Hygiène mémoire : les mots de passe saisis, le jeton, le ticket SSO et la
+//! copie du presse-papiers sont en `Zeroizing` ; le détail d'un élément est
+//! affiché par référence (aucun clone des données déchiffrées à chaque image) ;
+//! le verrouillage efface aussi l'état interne d'egui (contenu et historique
+//! d'annulation des champs de saisie).
 
 use crate::client::{validate_server_url, ApiResult, Client};
-use crate::config::Config;
+use crate::config::{choices, Config, Policy};
 use crate::vault::{self, LoginOutcome, PendingLogin, Vault};
 use eframe::egui::{self, Color32, RichText};
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{channel, Receiver};
-use std::time::{Duration, Instant};
+use std::sync::Arc;
+use std::time::{Duration, Instant, SystemTime};
 use locksy_core::api::{CreateItemRequest, SsoPublic, SsoRedeemResponse, SyncResponse, UpdateItemRequest};
 use locksy_core::generator::{self, PassphraseOptions, PasswordOptions};
-use locksy_core::model::{ItemData, ItemKind};
+use locksy_core::model::{Attachment, ItemData, ItemKind};
 use locksy_core::{now_unix, strength, totp};
-use zeroize::Zeroize;
+use zeroize::{Zeroize, Zeroizing};
 
 const ACCENT: Color32 = Color32::from_rgb(27, 107, 95);
 const ACCENT_LIGHT: Color32 = Color32::from_rgb(92, 194, 174);
@@ -18,12 +27,22 @@ const WARN: Color32 = Color32::from_rgb(214, 150, 40);
 const BAD: Color32 = Color32::from_rgb(214, 72, 64);
 const OK: Color32 = Color32::from_rgb(52, 168, 106);
 
+/// Écart d'horloge murale entre deux images, fenêtre au premier plan, au-delà
+/// duquel on considère que le poste a été mis en veille ou en hibernation.
+const SLEEP_GAP: Duration = Duration::from_secs(90);
+
+const IMPOSED: &str = "imposé par votre organisation";
+
+/// Réponse de la sonde des modes de connexion : (adresse sondée, (SSO, compte Windows)).
+type SsoProbe = (String, (Option<SsoPublic>, Option<SsoPublic>));
+
 enum Msg {
     Login(ApiResult<LoginOutcome>),
     Synced(ApiResult<SyncResponse>, Option<String>),
     Saved(ApiResult<Option<String>>, String),
     SsoTicket(Client, ApiResult<(String, SsoRedeemResponse)>),
-    Downloaded(ApiResult<std::path::PathBuf>),
+    /// `None` : enregistrement annulé, aucun message.
+    Downloaded(ApiResult<Option<PathBuf>>),
 }
 
 #[derive(PartialEq, Clone)]
@@ -41,6 +60,13 @@ enum Screen {
     Unlocked,
 }
 
+#[derive(Clone, Copy, PartialEq)]
+enum Tone {
+    Info,
+    Warn,
+    Bad,
+}
+
 struct Editor {
     item_id: Option<String>,
     collection_id: String,
@@ -49,6 +75,14 @@ struct Editor {
     urls: String,
     tags: String,
     show_password: bool,
+}
+
+impl Drop for Editor {
+    fn drop(&mut self) {
+        self.data.zeroize();
+        self.password.zeroize();
+        self.urls.zeroize();
+    }
 }
 
 struct Generator {
@@ -61,11 +95,12 @@ struct Generator {
 
 pub struct App {
     config: Config,
+    policy: Policy,
     screen: Screen,
     server: String,
     email: String,
-    password: String,
-    totp_code: String,
+    password: Zeroizing<String>,
+    totp_code: Zeroizing<String>,
     error: Option<String>,
     busy: Option<String>,
     rx: Option<Receiver<Msg>>,
@@ -78,17 +113,27 @@ pub struct App {
     revealed: bool,
     editor: Option<Editor>,
     generator: Generator,
+    settings_open: bool,
     last_activity: Instant,
-    clipboard: Option<(Instant, String)>,
-    toast: Option<(String, Instant, bool)>,
+    /// Horloge murale de l'image précédente (détection de la mise en veille).
+    last_wall: SystemTime,
+    was_focused: bool,
+    unfocused_since: Option<Instant>,
+    /// Secret copié et échéance de son effacement (`None` : jamais, sauf au verrouillage).
+    clipboard: Option<(Option<Instant>, Zeroizing<String>)>,
+    toast: Option<(String, Instant, Tone)>,
     confirm_trash: Option<String>,
+    save_request: Option<Attachment>,
     sso_info: Option<SsoPublic>,
     sso_probed_for: String,
-    sso_probe: Option<Receiver<(String, (Option<SsoPublic>, Option<SsoPublic>))>>,
+    sso_probe: Option<Receiver<SsoProbe>>,
     ldap_info: Option<SsoPublic>,
     win_user: String,
-    win_password: String,
-    sso_pending: Option<(String, SsoRedeemResponse)>,
+    win_password: Zeroizing<String>,
+    sso_pending: Option<(Zeroizing<String>, SsoRedeemResponse)>,
+    sso_cancel: Option<Arc<AtomicBool>>,
+    /// Effacer la mémoire d'egui au début de la prochaine image.
+    purge_ui: bool,
     logo: egui::TextureHandle,
 }
 
@@ -126,22 +171,60 @@ fn kind_label(k: ItemKind) -> &'static str {
     k.label()
 }
 
+/// Vide un champ secret en rendant son contenu (effacé à la libération).
+fn take_secret(s: &mut Zeroizing<String>) -> Zeroizing<String> {
+    std::mem::replace(s, Zeroizing::new(String::new()))
+}
+
+/// Vrai si l'horloge murale a sauté alors que la fenêtre était au premier
+/// plan (elle est alors redessinée chaque seconde) : veille ou hibernation.
+fn slept(gap: Duration, was_focused: bool) -> bool {
+    was_focused && gap > SLEEP_GAP
+}
+
+fn fmt_minutes(m: u64) -> String {
+    if m == 0 { "Jamais".into() } else { format!("{m} min") }
+}
+
+fn fmt_seconds(s: u64) -> String {
+    match s {
+        0 => "Jamais".into(),
+        s if s >= 60 && s % 60 == 0 => format!("{} min", s / 60),
+        s => format!("{s} s"),
+    }
+}
+
+/// Liste déroulante de réglage ; renvoie la valeur choisie, le cas échéant.
+fn setting_combo(ui: &mut egui::Ui, id: &str, current: u64, options: &[u64], fmt: fn(u64) -> String) -> Option<u64> {
+    let mut picked = None;
+    egui::ComboBox::from_id_salt(id).width(150.0).selected_text(fmt(current)).show_ui(ui, |ui| {
+        for &v in options {
+            if ui.selectable_label(v == current, fmt(v)).clicked() && v != current {
+                picked = Some(v);
+            }
+        }
+    });
+    picked
+}
+
 impl App {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         style(&cc.egui_ctx);
         let config = Config::load();
+        let policy = Policy::load();
         let logo = cc.egui_ctx.load_texture(
             "logo",
             egui::ColorImage::from_rgba_unmultiplied([64, 64], crate::LOGO_64),
             egui::TextureOptions::LINEAR,
         );
         Self {
-            server: config.server_url.clone(),
+            server: config.effective_server(&policy),
             email: config.last_email.clone(),
             config,
+            policy,
             screen: Screen::Login,
-            password: String::new(),
-            totp_code: String::new(),
+            password: Zeroizing::new(String::new()),
+            totp_code: Zeroizing::new(String::new()),
             error: None,
             busy: None,
             rx: None,
@@ -160,23 +243,34 @@ impl App {
                 phrase: PassphraseOptions::default(),
                 value: String::new(),
             },
+            settings_open: false,
             last_activity: Instant::now(),
+            last_wall: SystemTime::now(),
+            was_focused: true,
+            unfocused_since: None,
             clipboard: None,
             toast: None,
             confirm_trash: None,
+            save_request: None,
             sso_info: None,
             sso_probed_for: String::new(),
             sso_probe: None,
             ldap_info: None,
             win_user: crate::sso::current_windows_user(),
-            win_password: String::new(),
+            win_password: Zeroizing::new(String::new()),
             sso_pending: None,
+            sso_cancel: None,
+            purge_ui: false,
             logo,
         }
     }
 
     fn notify(&mut self, msg: impl Into<String>, bad: bool) {
-        self.toast = Some((msg.into(), Instant::now(), bad));
+        self.toast = Some((msg.into(), Instant::now(), if bad { Tone::Bad } else { Tone::Info }));
+    }
+
+    fn warn(&mut self, msg: impl Into<String>) {
+        self.toast = Some((msg.into(), Instant::now(), Tone::Warn));
     }
 
     fn spawn(&mut self, label: &str, ctx: &egui::Context, job: impl FnOnce() -> Msg + Send + 'static) {
@@ -206,17 +300,14 @@ impl App {
             return;
         }
         let email = self.email.trim().to_string();
-        let mut password = std::mem::take(&mut self.password);
-        self.spawn("Dérivation de la clé et déchiffrement…", ctx, move || {
-            let r = vault::login(client, &email, &password);
-            password.zeroize();
-            Msg::Login(r)
-        });
+        let pin = self.config.kdf_pin(&email);
+        let password = take_secret(&mut self.password);
+        self.spawn("Dérivation de la clé et déchiffrement…", ctx, move || Msg::Login(vault::login(client, &email, &password, pin)));
     }
 
     fn submit_totp(&mut self, ctx: &egui::Context) {
         let (Some(client), Some(pending)) = (self.client.take(), self.pending.take()) else { return };
-        let code = std::mem::take(&mut self.totp_code).trim().to_string();
+        let code = take_secret(&mut self.totp_code).trim().to_string();
         self.spawn("Vérification du code…", ctx, move || Msg::Login(vault::finish_login(client, pending, Some(code))));
     }
 
@@ -253,12 +344,18 @@ impl App {
         match msg {
             Msg::Login(Ok(LoginOutcome::Done(client, vault))) => {
                 self.client = Some(client);
+                if self.policy.server_url.is_none() {
+                    self.config.server_url = self.server.trim().trim_end_matches('/').to_string();
+                }
+                self.config.last_email = self.email.trim().to_string();
+                self.config.update_kdf_pin(&self.email, vault.kdf);
+                self.config.save(&self.policy);
                 self.vault = Some(vault);
                 self.screen = Screen::Unlocked;
-                self.config.server_url = self.server.trim().trim_end_matches('/').to_string();
-                self.config.last_email = self.email.trim().to_string();
-                self.config.save();
+                self.error = None;
                 self.last_activity = Instant::now();
+                self.last_wall = SystemTime::now();
+                self.unfocused_since = None;
                 self.nav = Nav::All;
                 self.selected = None;
             }
@@ -269,10 +366,11 @@ impl App {
                 self.error = err;
             }
             Msg::SsoTicket(client, Ok((ticket, info))) => {
+                self.sso_cancel = None;
                 if info.registered && info.kdf.is_some() {
                     self.client = Some(client);
                     self.email = info.email.clone();
-                    self.sso_pending = Some((ticket, info));
+                    self.sso_pending = Some((Zeroizing::new(ticket), info));
                     self.error = None;
                     self.screen = Screen::SsoPassword;
                 } else {
@@ -282,14 +380,28 @@ impl App {
                     ));
                 }
             }
-            Msg::Downloaded(Ok(path)) => {
-                self.notify(format!("Enregistré : {}", path.display()), false);
-            }
-            Msg::Downloaded(Err(e)) => {
-                self.notify(e.message, true);
-            }
             Msg::SsoTicket(_, Err(e)) => {
-                self.error = Some(e.message);
+                self.sso_cancel = None;
+                // Annulation par l'utilisateur : aucun message.
+                self.error = if e.code == "cancelled" { None } else { Some(e.message) };
+            }
+            Msg::Downloaded(Ok(Some(path))) => {
+                if vault::is_onedrive(&path) {
+                    self.warn(format!(
+                        "Enregistré : {}\nCe dossier est synchronisé avec OneDrive : le fichier déchiffré y sera copié.",
+                        path.display()
+                    ));
+                } else {
+                    self.notify(format!("Enregistré : {}", path.display()), false);
+                }
+            }
+            Msg::Downloaded(Ok(None)) => {}
+            Msg::Downloaded(Err(e)) => {
+                if e.status == 401 {
+                    self.lock("Session expirée. Reconnectez-vous.");
+                } else {
+                    self.notify(e.message, true);
+                }
             }
             Msg::Login(Err(e)) => {
                 self.screen = Screen::Login;
@@ -320,6 +432,8 @@ impl App {
         }
     }
 
+    /// Verrouille : efface les clés, les données déchiffrées, les saisies,
+    /// le presse-papiers (s'il contient encore notre secret) et l'état d'egui.
     fn lock(&mut self, reason: &str) {
         if let Some(client) = self.client.take() {
             std::thread::spawn(move || {
@@ -328,27 +442,48 @@ impl App {
         }
         self.vault = None; // l'effacement des données a lieu dans Drop
         self.pending = None;
-        if let Some(e) = &mut self.editor {
-            e.data.zeroize();
-            e.password.zeroize();
-        }
-        self.editor = None;
+        self.editor = None; // idem (Drop d'Editor)
         self.selected = None;
         self.revealed = false;
+        self.confirm_trash = None;
+        self.save_request = None;
         self.generator.value.zeroize();
+        self.generator.open = false;
+        self.settings_open = false;
+        self.search.zeroize();
+        self.password.zeroize();
+        self.totp_code.zeroize();
+        self.win_password.zeroize();
+        self.sso_pending = None;
+        if let Some(c) = self.sso_cancel.take() {
+            c.store(true, Ordering::Relaxed);
+        }
+        // Un résultat encore en route (synchronisation…) est abandonné.
+        self.rx = None;
+        self.busy = None;
+        self.clear_clipboard();
+        self.unfocused_since = None;
+        self.purge_ui = true;
         self.screen = Screen::Login;
-        self.error = Some(reason.to_string());
+        self.error = if reason.is_empty() { None } else { Some(reason.to_string()) };
+    }
+
+    fn clear_clipboard(&mut self) {
+        if let Some((_, text)) = self.clipboard.take() {
+            crate::clip::clear_if(&text);
+        }
     }
 
     fn copy(&mut self, text: &str, label: &str) {
-        match arboard::Clipboard::new().and_then(|mut c| c.set_text(text.to_string())) {
+        match crate::clip::set_secret(text) {
             Ok(()) => {
-                let secs = self.config.clipboard_seconds;
+                let secs = self.config.effective_clipboard(&self.policy);
+                let when = (secs > 0).then(|| Instant::now() + Duration::from_secs(secs));
+                self.clipboard = Some((when, Zeroizing::new(text.to_string())));
                 if secs > 0 {
-                    self.clipboard = Some((Instant::now() + Duration::from_secs(secs), text.to_string()));
-                    self.notify(format!("{label} copié · effacé dans {secs} s"), false);
+                    self.notify(format!("{label} copié · effacé dans {}", fmt_seconds(secs)), false);
                 } else {
-                    self.notify(format!("{label} copié"), false);
+                    self.notify(format!("{label} copié · effacé au verrouillage"), false);
                 }
             }
             Err(_) => self.notify("Presse-papiers indisponible.", true),
@@ -356,43 +491,101 @@ impl App {
     }
 
     fn housekeeping(&mut self, ctx: &egui::Context) {
-        let active = ctx.input(|i| !i.events.is_empty() || i.pointer.delta() != egui::Vec2::ZERO);
+        let (active, focused) = ctx.input(|i| (!i.events.is_empty() || i.pointer.delta() != egui::Vec2::ZERO, i.viewport().focused));
         if active {
             self.last_activity = Instant::now();
         }
-        if matches!(self.screen, Screen::Unlocked) && self.config.auto_lock_minutes > 0 {
-            let limit = Duration::from_secs(self.config.auto_lock_minutes * 60);
-            if self.last_activity.elapsed() > limit {
+        let now_wall = SystemTime::now();
+        let gap = now_wall.duration_since(self.last_wall).unwrap_or_default();
+        if matches!(self.screen, Screen::Unlocked) {
+            let auto = self.config.effective_auto_lock(&self.policy);
+            let focus_lock = self.config.effective_focus_lock(&self.policy);
+            if focused == Some(false) {
+                if self.unfocused_since.is_none() {
+                    self.unfocused_since = Some(Instant::now());
+                }
+            } else {
+                self.unfocused_since = None;
+            }
+            if slept(gap, self.was_focused) {
+                self.lock("Coffre verrouillé après la mise en veille.");
+            } else if auto > 0 && self.last_activity.elapsed() > Duration::from_secs(auto * 60) {
                 self.lock("Coffre verrouillé après inactivité.");
+            } else if focus_lock > 0 && self.unfocused_since.is_some_and(|t| t.elapsed() > Duration::from_secs(focus_lock * 60)) {
+                // Le verrouillage de session Windows (Win+L) retire le focus : il
+                // est couvert ici. WTSRegisterSessionNotification exigerait du
+                // code unsafe (interdit dans ce crate) pour un gain minime.
+                self.lock("Coffre verrouillé : Locksy est resté en arrière-plan.");
             }
             ctx.request_repaint_after(Duration::from_secs(1));
         }
-        if let Some((when, text)) = &self.clipboard {
-            if Instant::now() >= *when {
-                if let Ok(mut c) = arboard::Clipboard::new() {
-                    if c.get_text().map(|t| &t == text).unwrap_or(false) {
-                        let _ = c.set_text(String::new());
-                    }
-                }
-                if let Some((_, mut t)) = self.clipboard.take() {
-                    t.zeroize();
-                }
-            } else {
-                ctx.request_repaint_after(Duration::from_millis(500));
-            }
+        self.last_wall = now_wall;
+        self.was_focused = focused != Some(false);
+        match self.clipboard.as_ref().and_then(|(when, _)| *when) {
+            Some(w) if Instant::now() >= w => self.clear_clipboard(),
+            Some(_) => ctx.request_repaint_after(Duration::from_millis(500)),
+            None => {}
         }
-        if let Some((_, at, _)) = &self.toast {
-            if at.elapsed() > Duration::from_secs(4) {
+        if let Some((_, at, tone)) = &self.toast {
+            let keep = if *tone == Tone::Info { 4 } else { 8 };
+            if at.elapsed() > Duration::from_secs(keep) {
                 self.toast = None;
             } else {
                 ctx.request_repaint_after(Duration::from_millis(250));
             }
         }
     }
+
+    /// Demande l'emplacement puis déchiffre la pièce jointe en arrière-plan.
+    fn save_attachment(&mut self, ctx: &egui::Context, frame: &eframe::Frame, att: Attachment) {
+        let Some(client) = self.client.clone() else { return };
+        let picked = pick_save_path(frame, &att.name);
+        // Le dialogue est modal : le temps passé dedans n'est ni de la veille
+        // ni de l'inactivité.
+        self.last_wall = SystemTime::now();
+        self.last_activity = Instant::now();
+        let path = match picked {
+            Ok(Some(p)) => p,
+            Ok(None) => return, // annulé : aucun message
+            Err(e) => {
+                self.notify(e, true);
+                return;
+            }
+        };
+        self.spawn("Déchiffrement de la pièce jointe…", ctx, move || {
+            Msg::Downloaded(vault::save_attachment_to(&client, &att, &path).map(|()| Some(path)))
+        });
+    }
+}
+
+/// Dialogue « Enregistrer sous » de Windows, ouvert depuis le fil d'interface
+/// et rattaché à la fenêtre de Locksy ; dossier Documents par défaut.
+#[cfg(windows)]
+fn pick_save_path(frame: &eframe::Frame, name: &str) -> Result<Option<PathBuf>, String> {
+    let mut dialog = rfd::FileDialog::new()
+        .set_title("Enregistrer la pièce jointe déchiffrée")
+        .set_file_name(vault::sanitize_file_name(name))
+        .set_parent(frame);
+    if let Some(dir) = dirs::document_dir() {
+        dialog = dialog.set_directory(dir);
+    }
+    Ok(dialog.save_file())
+}
+
+/// Hors Windows (tests, développement) : dossier Téléchargements, sans dialogue.
+#[cfg(not(windows))]
+fn pick_save_path(_frame: &eframe::Frame, name: &str) -> Result<Option<PathBuf>, String> {
+    vault::default_download_path(name).map(Some).map_err(|e| e.message)
 }
 
 impl eframe::App for App {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+        if self.purge_ui {
+            // Contenu et historique d'annulation des champs de saisie, états
+            // des panneaux : rien ne doit survivre au verrouillage.
+            ctx.memory_mut(|m| m.data.clear());
+            self.purge_ui = false;
+        }
         self.poll(ctx);
         self.housekeeping(ctx);
         match self.screen {
@@ -402,29 +595,32 @@ impl eframe::App for App {
             Screen::Unlocked => self.ui_main(ctx),
         }
         self.ui_generator(ctx);
-        if let Some((msg, _, bad)) = &self.toast {
+        self.ui_settings(ctx);
+        if let Some((msg, _, tone)) = &self.toast {
             egui::Area::new(egui::Id::new("toast"))
                 .anchor(egui::Align2::RIGHT_BOTTOM, [-16.0, -16.0])
                 .show(ctx, |ui| {
-                    egui::Frame::popup(ui.style())
-                        .fill(if *bad { BAD } else { ui.visuals().extreme_bg_color })
-                        .show(ui, |ui| {
-                            ui.label(RichText::new(msg).color(if *bad { Color32::WHITE } else { ui.visuals().text_color() }));
-                        });
+                    let (fill, fg) = match tone {
+                        Tone::Info => (ui.visuals().extreme_bg_color, ui.visuals().text_color()),
+                        Tone::Warn => (WARN, Color32::BLACK),
+                        Tone::Bad => (BAD, Color32::WHITE),
+                    };
+                    egui::Frame::popup(ui.style()).fill(fill).show(ui, |ui| {
+                        ui.set_max_width(460.0);
+                        ui.label(RichText::new(msg).color(fg));
+                    });
                 });
+        }
+        if let Some(att) = self.save_request.take() {
+            if matches!(self.screen, Screen::Unlocked) {
+                self.save_attachment(ctx, frame, att);
+            }
         }
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
+        // Le verrouillage vide aussi le presse-papiers s'il contient notre secret.
         self.lock("");
-        if let Some((_, mut t)) = self.clipboard.take() {
-            if let Ok(mut c) = arboard::Clipboard::new() {
-                if c.get_text().map(|x| x == t).unwrap_or(false) {
-                    let _ = c.set_text(String::new());
-                }
-            }
-            t.zeroize();
-        }
     }
 }
 
@@ -487,16 +683,19 @@ impl App {
                 return;
             }
         };
-        let (listener, url) = match crate::sso::prepare(&client) {
+        let start = match crate::sso::prepare(&client) {
             Ok(x) => x,
             Err(e) => {
                 self.error = Some(e.message);
                 return;
             }
         };
-        ctx.open_url(egui::OpenUrl::new_tab(url));
+        let cancel = Arc::new(AtomicBool::new(false));
+        self.sso_cancel = Some(cancel.clone());
+        ctx.open_url(egui::OpenUrl::new_tab(&start.url));
+        let crate::sso::SsoStart { listener, state, .. } = start;
         self.spawn("Connexion dans votre navigateur…", ctx, move || {
-            let r = crate::sso::wait_ticket(&client, listener);
+            let r = crate::sso::wait_ticket(&client, listener, &state, &cancel);
             Msg::SsoTicket(client, r)
         });
     }
@@ -515,10 +714,9 @@ impl App {
             return;
         }
         let user = self.win_user.trim().to_string();
-        let mut password = std::mem::take(&mut self.win_password);
+        let password = take_secret(&mut self.win_password);
         self.spawn("Vérification auprès de l'annuaire…", ctx, move || {
             let r = crate::sso::windows_login(&client, &user, &password);
-            password.zeroize();
             Msg::SsoTicket(client, r)
         });
     }
@@ -528,17 +726,25 @@ impl App {
         let mut submit = false;
         let mut sso_click = false;
         let mut win_click = false;
+        let mut cancel_sso = false;
         let busy = self.busy.clone();
+        let sso_waiting = busy.is_some() && self.sso_cancel.is_some();
         let sso = self.sso_info.clone();
         let ldap = self.ldap_info.clone();
+        let imposed_server = self.policy.server_url.clone();
         card(ctx, &self.logo.clone(), |ui| {
             ui.heading("Connexion");
             ui.label(RichText::new("Le mot de passe maître ne quitte jamais ce poste : le coffre est déchiffré ici.").weak());
             ui.add_space(8.0);
             ui.label("Serveur");
-            ui.add(egui::TextEdit::singleline(&mut self.server).desired_width(f32::INFINITY).hint_text("https://coffre.entreprise.fr"));
-            if let Err(e) = validate_server_url(&self.server) {
-                ui.label(RichText::new(e).color(WARN).small());
+            if let Some(url) = &imposed_server {
+                ui.label(RichText::new(url).monospace());
+                ui.label(RichText::new(format!("Adresse {IMPOSED}.")).small().weak());
+            } else {
+                ui.add(egui::TextEdit::singleline(&mut self.server).desired_width(f32::INFINITY).hint_text("https://coffre.entreprise.fr"));
+                if let Err(e) = validate_server_url(&self.server) {
+                    ui.label(RichText::new(e).color(WARN).small());
+                }
             }
             if let Some(l) = &ldap {
                 ui.add_space(4.0);
@@ -546,7 +752,7 @@ impl App {
                 ui.label("Identifiant Windows");
                 ui.add(egui::TextEdit::singleline(&mut self.win_user).desired_width(f32::INFINITY).hint_text("DOMAINE\\identifiant"));
                 ui.label("Mot de passe Windows");
-                let wp = ui.add(egui::TextEdit::singleline(&mut self.win_password).password(true).desired_width(f32::INFINITY));
+                let wp = ui.add(egui::TextEdit::singleline(&mut *self.win_password).password(true).desired_width(f32::INFINITY));
                 if self.win_password.is_empty() && busy.is_none() && !wp.has_focus() && self.error.is_none() {
                     wp.request_focus();
                 }
@@ -577,7 +783,7 @@ impl App {
             ui.label("Adresse e-mail");
             let email = ui.add(egui::TextEdit::singleline(&mut self.email).desired_width(f32::INFINITY));
             ui.label("Mot de passe maître");
-            let pw = ui.add(egui::TextEdit::singleline(&mut self.password).password(true).desired_width(f32::INFINITY));
+            let pw = ui.add(egui::TextEdit::singleline(&mut *self.password).password(true).desired_width(f32::INFINITY));
             if ldap.is_some() {
                 // Le formulaire Windows a la priorité.
             } else if self.email.is_empty() {
@@ -597,12 +803,23 @@ impl App {
                     ui.spinner();
                     ui.label(b);
                 });
+                if sso_waiting {
+                    ui.label(RichText::new("Terminez la connexion dans le navigateur qui vient de s'ouvrir.").small().weak());
+                    if ui.button("Annuler la connexion SSO").clicked() {
+                        cancel_sso = true;
+                    }
+                }
             } else if primary(ui, "   Se connecter   ").clicked() {
                 submit = true;
             }
             ui.add_space(4.0);
             ui.label(RichText::new("Mot de passe oublié ou création de compte : utilisez l'interface web du serveur.").small().weak());
         });
+        if cancel_sso {
+            if let Some(c) = &self.sso_cancel {
+                c.store(true, Ordering::Relaxed);
+            }
+        }
         if submit && self.busy.is_none() {
             self.start_login(ctx);
         }
@@ -624,7 +841,7 @@ impl App {
             ui.heading(format!("Bonjour {who}"));
             ui.label(RichText::new(format!("Identité confirmée par votre entreprise : {email}")).color(OK));
             ui.label("Saisissez votre mot de passe maître : lui seul déchiffre votre coffre, l'entreprise ne le connaît pas.");
-            let pw = ui.add(egui::TextEdit::singleline(&mut self.password).password(true).desired_width(f32::INFINITY));
+            let pw = ui.add(egui::TextEdit::singleline(&mut *self.password).password(true).desired_width(f32::INFINITY));
             if busy.is_none() && !pw.has_focus() {
                 pw.request_focus();
             }
@@ -659,12 +876,11 @@ impl App {
         } else if submit && self.busy.is_none() && !self.password.is_empty() {
             let (Some(client), Some((ticket, info))) = (self.client.take(), self.sso_pending.take()) else { return };
             let Some(kdf) = info.kdf.clone() else { return };
-            let mut password = std::mem::take(&mut self.password);
+            let password = take_secret(&mut self.password);
             let email = info.email.clone();
+            let pin = self.config.kdf_pin(&email);
             self.spawn("Déchiffrement du coffre…", ctx, move || {
-                let r = vault::login_with(client, &email, &password, &kdf, Some(ticket));
-                password.zeroize();
-                Msg::Login(r)
+                Msg::Login(vault::login_with(client, &email, &password, &kdf, Some(ticket.to_string()), pin))
             });
         }
     }
@@ -673,11 +889,18 @@ impl App {
         let mut submit = false;
         let mut cancel = false;
         let busy = self.busy.clone();
+        let via_sso = self.pending.as_ref().is_some_and(|p| p.via_sso());
         card(ctx, &self.logo.clone(), |ui| {
             ui.heading("Double authentification");
-            ui.label("Saisissez le code à 6 chiffres affiché par votre application d'authentification.");
-            let r = ui.add(egui::TextEdit::singleline(&mut self.totp_code).font(egui::TextStyle::Heading).desired_width(f32::INFINITY).char_limit(8));
-            r.request_focus();
+            if via_sso {
+                ui.label(RichText::new("Identité d'entreprise confirmée ; saisissez le code dans les 5 minutes, sinon recommencez la connexion d'entreprise.").color(OK));
+            }
+            ui.label("Saisissez le code à 6 chiffres affiché par votre application d'authentification, ou l'un de vos codes de secours (XXXXX-XXXXX).");
+            // 16 caractères : un code de secours (10 caractères et un tiret) tapé avec des espaces.
+            let r = ui.add(egui::TextEdit::singleline(&mut *self.totp_code).font(egui::TextStyle::Heading).desired_width(f32::INFINITY).char_limit(16));
+            if busy.is_none() {
+                r.request_focus();
+            }
             if r.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
                 submit = true;
             }
@@ -703,11 +926,96 @@ impl App {
         if cancel {
             self.pending = None;
             self.client = None;
+            self.totp_code.zeroize();
             self.error = None;
             self.screen = Screen::Login;
         } else if submit && self.busy.is_none() {
             self.submit_totp(ctx);
         }
+    }
+
+    // ------------------------------------------------------------ Réglages
+
+    fn ui_settings(&mut self, ctx: &egui::Context) {
+        if !self.settings_open {
+            return;
+        }
+        let mut open = true;
+        let mut changed = false;
+        let p = self.policy.clone();
+        egui::Window::new("Réglages").open(&mut open).resizable(false).collapsible(false).default_width(460.0).show(ctx, |ui| {
+            let note = |ui: &mut egui::Ui, text: String| {
+                ui.label("");
+                ui.label(RichText::new(text).small().weak());
+                ui.end_row();
+            };
+            egui::Grid::new("settings").num_columns(2).spacing([16.0, 10.0]).show(ui, |ui| {
+                ui.label("Verrouillage automatique");
+                let cur = self.config.effective_auto_lock(&p);
+                if let Some(v) = setting_combo(ui, "set-autolock", cur, &choices(&[1, 5, 10, 30, 60, 0], p.max_auto_lock_minutes), fmt_minutes) {
+                    self.config.auto_lock_minutes = v;
+                    changed = true;
+                }
+                ui.end_row();
+                match p.max_auto_lock_minutes {
+                    Some(m) => note(ui, format!("Après {} d'inactivité au plus : {IMPOSED}.", fmt_minutes(m))),
+                    None => note(ui, "Après cette durée sans activité dans Locksy.".into()),
+                }
+
+                ui.label("Effacement du presse-papiers");
+                let cur = self.config.effective_clipboard(&p);
+                if let Some(v) = setting_combo(ui, "set-clip", cur, &choices(&[15, 30, 60, 120, 0], p.clipboard_seconds), fmt_seconds) {
+                    self.config.clipboard_seconds = v;
+                    changed = true;
+                }
+                ui.end_row();
+                match p.clipboard_seconds {
+                    Some(s) => note(ui, format!("{} au plus : {IMPOSED}.", fmt_seconds(s))),
+                    None => note(ui, "Le presse-papiers est aussi vidé au verrouillage et à la fermeture.".into()),
+                }
+
+                ui.label("Verrouillage en arrière-plan");
+                match p.lock_on_focus_loss_minutes {
+                    Some(0) => {
+                        ui.label(RichText::new("Désactivé").weak());
+                        ui.end_row();
+                        note(ui, format!("Désactivé : {IMPOSED}."));
+                    }
+                    max => {
+                        let cur = self.config.effective_focus_lock(&p);
+                        if let Some(v) = setting_combo(ui, "set-focus", cur, &choices(&[1, 5, 15, 0], max), fmt_minutes) {
+                            self.config.lock_on_focus_loss_minutes = v;
+                            changed = true;
+                        }
+                        ui.end_row();
+                        match max {
+                            Some(m) => note(ui, format!("{} au plus : {IMPOSED}.", fmt_minutes(m))),
+                            None => note(ui, "Quand Locksy n'est plus au premier plan (autre fenêtre, session Windows verrouillée).".into()),
+                        }
+                    }
+                }
+            });
+            ui.separator();
+            ui.label(
+                RichText::new("Les secrets copiés sont exclus de l'historique du presse-papiers (Win+V) et de sa synchronisation cloud. Le coffre se verrouille aussi après une mise en veille.")
+                    .small()
+                    .weak(),
+            );
+        });
+        if changed {
+            self.config.save(&self.policy);
+            // Un délai raccourci s'applique aussi au secret déjà copié.
+            let secs = self.config.effective_clipboard(&self.policy);
+            if let Some((when, _)) = &mut self.clipboard {
+                if secs > 0 {
+                    let limit = Instant::now() + Duration::from_secs(secs);
+                    if when.is_none_or(|w| w > limit) {
+                        *when = Some(limit);
+                    }
+                }
+            }
+        }
+        self.settings_open = open;
     }
 }
 
@@ -739,13 +1047,18 @@ impl App {
                 if words.is_empty() {
                     return true;
                 }
-                let hay = format!("{} {} {} {} {}", d.name, d.username, d.urls.join(" "), d.tags.join(" "), d.notes).to_lowercase();
+                let hay = Zeroizing::new(format!("{} {} {} {} {}", d.name, d.username, d.urls.join(" "), d.tags.join(" "), d.notes).to_lowercase());
                 words.iter().all(|w| hay.contains(w))
             })
             .map(|(i, d)| Row { id: i.id.clone(), name: d.name.clone(), subtitle: d.subtitle(), favorite: d.favorite })
             .collect();
         rows.sort_by(|a, b| b.favorite.cmp(&a.favorite).then_with(|| a.name.to_lowercase().cmp(&b.name.to_lowercase())));
         rows
+    }
+
+    /// Copie des données d'un élément, uniquement quand une action en a besoin.
+    fn item_data(&self, id: &str) -> Option<ItemData> {
+        self.vault.as_ref()?.items.iter().find(|i| i.id == id)?.data.clone()
     }
 
     fn ui_main(&mut self, ctx: &egui::Context) {
@@ -763,11 +1076,14 @@ impl App {
                 ui.add_space(16.0);
                 ui.add(egui::TextEdit::singleline(&mut self.search).hint_text("🔎 Rechercher (nom, identifiant, site, étiquette)…").desired_width(380.0));
                 if !self.search.is_empty() && ui.small_button("✕").clicked() {
-                    self.search.clear();
+                    self.search.zeroize();
                 }
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if ui.button("🔒 Verrouiller").on_hover_text("Ctrl+L").clicked() {
                         do_lock = true;
+                    }
+                    if ui.button("⚙ Réglages").clicked() {
+                        self.settings_open = true;
                     }
                     if ui.button("🎲 Générateur").clicked() {
                         self.generator.open = true;
@@ -829,7 +1145,13 @@ impl App {
             e.push((Nav::Trash, format!("🗑  Corbeille  ({trash})")));
             e
         };
+        let summary = format!(
+            "Verrouillage : {} · presse-papiers : {}",
+            fmt_minutes(self.config.effective_auto_lock(&self.policy)).to_lowercase(),
+            fmt_seconds(self.config.effective_clipboard(&self.policy)).to_lowercase()
+        );
         let mut new_nav = None;
+        let mut open_settings = false;
         egui::SidePanel::left("nav").resizable(false).exact_width(230.0).show(ctx, |ui| {
             ui.add_space(8.0);
             ui.label(RichText::new("COFFRES").small().strong().weak());
@@ -846,25 +1168,23 @@ impl App {
             }
             ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
                 ui.add_space(6.0);
-                ui.horizontal(|ui| {
-                    ui.label(RichText::new("Verrouillage auto").small());
-                    egui::ComboBox::from_id_salt("autolock")
-                        .selected_text(match self.config.auto_lock_minutes { 0 => "jamais".to_string(), m => format!("{m} min") })
-                        .show_ui(ui, |ui| {
-                            for m in [1u64, 5, 10, 30, 60, 0] {
-                                let label = if m == 0 { "jamais".to_string() } else { format!("{m} min") };
-                                if ui.selectable_value(&mut self.config.auto_lock_minutes, m, label).changed() {
-                                    self.config.save();
-                                }
-                            }
-                        });
-                });
+                ui.label(RichText::new(&summary).small().weak());
+                if ui.button("⚙  Réglages").clicked() {
+                    open_settings = true;
+                }
             });
         });
+        if open_settings {
+            self.settings_open = true;
+        }
         if let Some(n) = new_nav {
-            self.nav = n;
-            self.selected = None;
-            self.editor = None;
+            if n != self.nav {
+                self.nav = n;
+                self.selected = None;
+                self.revealed = false;
+                self.confirm_trash = None;
+                self.editor = None; // Drop efface les données de l'éditeur
+            }
         }
     }
 
@@ -918,10 +1238,12 @@ impl App {
             });
         });
         if let Some(id) = pick {
-            self.selected = Some(id);
-            self.revealed = false;
-            self.editor = None;
-            self.confirm_trash = None;
+            if self.selected.as_deref() != Some(id.as_str()) {
+                self.selected = Some(id);
+                self.revealed = false;
+                self.editor = None; // Drop efface les données de l'éditeur
+                self.confirm_trash = None;
+            }
         }
         if let (Some(k), Some(cid)) = (new_kind, writable_target) {
             let data = ItemData { kind: k, ..Default::default() };
@@ -939,19 +1261,22 @@ impl App {
         v.collections.iter().find(|c| c.writable()).map(|c| c.id.clone())
     }
 
+    /// Détail d'un élément, rendu par référence : les données déchiffrées ne
+    /// sont jamais copiées pour l'affichage. Les actions sont collectées puis
+    /// appliquées après la fin de l'emprunt du coffre.
     fn ui_detail(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
-        let Some(v) = &self.vault else { return };
         let Some(id) = self.selected.clone() else {
             ui.centered_and_justified(|ui| {
                 ui.label(RichText::new("Sélectionnez un élément pour l'afficher.").weak());
             });
             return;
         };
+        let Some(v) = self.vault.as_deref() else { return };
         let Some(item) = v.items.iter().find(|i| i.id == id) else {
             self.selected = None;
             return;
         };
-        let Some(d) = item.data.clone() else { return };
+        let Some(d) = item.data.as_ref() else { return };
         let col = v.collection(&item.collection_id);
         let writable = col.is_some_and(|c| c.writable());
         let col_label = col.map(|c| c.label().to_string()).unwrap_or_default();
@@ -960,10 +1285,13 @@ impl App {
         let collection_id = item.collection_id.clone();
         let reused = !d.password.is_empty()
             && v.items.iter().any(|o| o.id != id && o.deleted_at.is_none() && o.data.as_ref().is_some_and(|x| x.password == d.password));
+        let revealed = self.revealed;
+        let confirming = self.confirm_trash.as_deref() == Some(id.as_str());
 
-        let copy: std::cell::RefCell<Option<(String, String)>> = std::cell::RefCell::new(None);
-        let mut download: Option<locksy_core::model::Attachment> = None;
+        let copy: std::cell::RefCell<Option<(Zeroizing<String>, String)>> = std::cell::RefCell::new(None);
+        let mut download: Option<Attachment> = None;
         let mut action: Option<&str> = None;
+        let mut toggle_reveal = false;
 
         egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
             ui.add_space(8.0);
@@ -991,8 +1319,7 @@ impl App {
                     ui.horizontal(|ui| {
                         ui.vertical(|ui| {
                             ui.label(RichText::new(label).small().strong().weak());
-                            let shown = if secret && !revealed { "••••••••••••".to_string() } else { value.to_string() };
-                            let mut txt = RichText::new(shown);
+                            let mut txt = if secret && !revealed { RichText::new("••••••••••••") } else { RichText::new(value) };
                             if mono || (secret && revealed) {
                                 txt = txt.monospace();
                             }
@@ -1000,23 +1327,25 @@ impl App {
                         });
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             if ui.button("📋 Copier").clicked() {
-                                *copy.borrow_mut() = Some((value.to_string(), label.to_string()));
+                                *copy.borrow_mut() = Some((Zeroizing::new(value.to_string()), label.to_string()));
                             }
                         });
                     });
                 });
+            };
+            let reveal_button = |ui: &mut egui::Ui, toggle: &mut bool| {
+                if ui.small_button(if revealed { "🙈 Masquer" } else { "👁 Afficher" }).clicked() {
+                    *toggle = true;
+                }
             };
 
             match d.kind {
                 ItemKind::Login => {
                     field(ui, "Identifiant", &d.username, false, true, false);
                     if !d.password.is_empty() {
-                        field(ui, "Mot de passe", &d.password, true, self.revealed, true);
+                        field(ui, "Mot de passe", &d.password, true, revealed, true);
                         ui.horizontal(|ui| {
-                            let label = if self.revealed { "🙈 Masquer" } else { "👁 Afficher" };
-                            if ui.small_button(label).clicked() {
-                                self.revealed = !self.revealed;
-                            }
+                            reveal_button(ui, &mut toggle_reveal);
                             let s = strength::estimate(&d.password);
                             let color = match s.score { 4 => OK, 3 => accent(ui), 2 => WARN, _ => BAD };
                             ui.label(RichText::new(format!("{} · {} bits", s.label, s.entropy_bits.round())).small().color(color));
@@ -1029,7 +1358,7 @@ impl App {
                         match totp::parse(&d.totp) {
                             Ok(cfg) => {
                                 let t = now_unix() as u64;
-                                let code = totp::code_at(&cfg, t);
+                                let code = Zeroizing::new(totp::code_at(&cfg, t));
                                 let left = totp::seconds_remaining(&cfg, t);
                                 egui::Frame::group(ui.style()).show(ui, |ui| {
                                     ui.set_width(ui.available_width());
@@ -1064,7 +1393,7 @@ impl App {
                                 });
                                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                                     if ui.button("📋 Copier").clicked() {
-                                        *copy.borrow_mut() = Some((u.clone(), "Adresse".into()));
+                                        *copy.borrow_mut() = Some((Zeroizing::new(u.clone()), "Adresse".into()));
                                     }
                                     let lower = u.to_lowercase();
                                     if (lower.starts_with("https://") || lower.starts_with("http://")) && ui.button("↗ Ouvrir").clicked() {
@@ -1077,13 +1406,11 @@ impl App {
                 }
                 ItemKind::Card => {
                     field(ui, "Titulaire", &d.card.holder, false, true, false);
-                    field(ui, "Numéro", &d.card.number, true, self.revealed, true);
+                    field(ui, "Numéro", &d.card.number, true, revealed, true);
                     field(ui, "Expiration", &d.card.expiry, false, true, false);
-                    field(ui, "Cryptogramme", &d.card.cvv, true, self.revealed, true);
-                    field(ui, "Code PIN", &d.card.pin, true, self.revealed, true);
-                    if ui.small_button(if self.revealed { "🙈 Masquer" } else { "👁 Afficher" }).clicked() {
-                        self.revealed = !self.revealed;
-                    }
+                    field(ui, "Cryptogramme", &d.card.cvv, true, revealed, true);
+                    field(ui, "Code PIN", &d.card.pin, true, revealed, true);
+                    reveal_button(ui, &mut toggle_reveal);
                 }
                 ItemKind::Identity => {
                     let i = &d.identity;
@@ -1093,21 +1420,22 @@ impl App {
                     field(ui, "Téléphone", &i.phone, false, true, false);
                     field(ui, "Adresse", &i.address, false, true, false);
                     field(ui, "Société", &i.company, false, true, false);
-                    field(ui, "N° de document", &i.document_number, true, self.revealed, true);
+                    field(ui, "N° de document", &i.document_number, true, revealed, true);
+                    if !i.document_number.is_empty() {
+                        reveal_button(ui, &mut toggle_reveal);
+                    }
                 }
                 ItemKind::Ssh => {
                     field(ui, "Clé publique", &d.ssh.public_key, false, true, true);
-                    field(ui, "Clé privée", &d.ssh.private_key, true, self.revealed, true);
-                    field(ui, "Phrase de passe", &d.ssh.passphrase, true, self.revealed, true);
-                    if ui.small_button(if self.revealed { "🙈 Masquer" } else { "👁 Afficher" }).clicked() {
-                        self.revealed = !self.revealed;
-                    }
+                    field(ui, "Clé privée", &d.ssh.private_key, true, revealed, true);
+                    field(ui, "Phrase de passe", &d.ssh.passphrase, true, revealed, true);
+                    reveal_button(ui, &mut toggle_reveal);
                 }
                 ItemKind::Note => {}
             }
             for f in &d.fields {
                 let label = if f.label.is_empty() { "Champ" } else { &f.label };
-                field(ui, label, &f.value, f.hidden, self.revealed, false);
+                field(ui, label, &f.value, f.hidden, revealed, false);
             }
             field(ui, "Notes", &d.notes, false, true, false);
 
@@ -1121,7 +1449,7 @@ impl App {
                             ui.label(format!("📎 {}", a.name));
                             ui.label(RichText::new(size).small().weak());
                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                if ui.button("⬇ Enregistrer").on_hover_text("Déchiffré et enregistré dans Téléchargements").clicked() {
+                                if ui.button("⬇ Enregistrer sous…").on_hover_text("Enregistrer sous…").clicked() {
                                     download = Some(a.clone());
                                 }
                             });
@@ -1135,7 +1463,7 @@ impl App {
                         ui.horizontal(|ui| {
                             ui.label(RichText::new(format_date(h.changed_at)).small().weak());
                             if ui.small_button("📋").on_hover_text("Copier cet ancien mot de passe").clicked() {
-                                *copy.borrow_mut() = Some((h.password.clone(), "Ancien mot de passe".into()));
+                                *copy.borrow_mut() = Some((Zeroizing::new(h.password.clone()), "Ancien mot de passe".into()));
                             }
                         });
                     }
@@ -1155,7 +1483,7 @@ impl App {
                     if ui.button(if d.favorite { "☆ Retirer des favoris" } else { "⭐ Favori" }).clicked() {
                         action = Some("favorite");
                     }
-                    if self.confirm_trash.as_deref() == Some(&id) {
+                    if confirming {
                         ui.label(RichText::new("Mettre à la corbeille ?").color(BAD));
                         if ui.button("Oui").clicked() {
                             action = Some("trash");
@@ -1172,31 +1500,39 @@ impl App {
             ui.label(RichText::new(format!("Créé le {} · modifié le {} · révision {revision}", format_date(created), format_date(updated))).small().weak());
         });
 
+        // Fin de l'emprunt du coffre : on applique les actions.
+        if toggle_reveal {
+            self.revealed = !self.revealed;
+        }
         if let Some((value, label)) = copy.into_inner() {
             self.copy(&value, &label);
         }
-        if let (Some(att), Some(client)) = (download, self.client.clone()) {
-            self.spawn("Déchiffrement de la pièce jointe…", ctx, move || Msg::Downloaded(vault::save_attachment(&client, &att)));
+        if download.is_some() {
+            self.save_request = download;
         }
         match action {
             Some("edit") => {
-                self.editor = Some(Editor {
-                    item_id: Some(id.clone()),
-                    collection_id,
-                    password: d.password.clone(),
-                    urls: d.urls.join("\n"),
-                    tags: d.tags.join(", "),
-                    data: d,
-                    show_password: false,
-                });
+                if let Some(data) = self.item_data(&id) {
+                    self.editor = Some(Editor {
+                        item_id: Some(id.clone()),
+                        collection_id,
+                        password: data.password.clone(),
+                        urls: data.urls.join("\n"),
+                        tags: data.tags.join(", "),
+                        data,
+                        show_password: false,
+                    });
+                }
             }
             Some("favorite") => {
-                let mut nd = d;
-                nd.favorite = !nd.favorite;
-                if let Some(v) = &self.vault {
-                    match v.prepare_update(&id, &collection_id, &nd) {
-                        Ok((path, req)) => self.send_update(ctx, path, req, "Favoris mis à jour."),
-                        Err(e) => self.notify(e.message, true),
+                if let Some(mut nd) = self.item_data(&id) {
+                    nd.favorite = !nd.favorite;
+                    let prepared = self.vault.as_ref().map(|v| v.prepare_update(&id, &collection_id, &nd));
+                    nd.zeroize();
+                    match prepared {
+                        Some(Ok((path, req))) => self.send_update(ctx, path, req, "Favoris mis à jour."),
+                        Some(Err(e)) => self.notify(e.message, true),
+                        None => {}
                     }
                 }
             }
@@ -1325,15 +1661,13 @@ impl App {
 
         if gen {
             if let Ok(g) = generator::generate_password(&self.generator.pw) {
+                ed.password.zeroize();
                 ed.password = g.value;
                 ed.show_password = true;
             }
         }
         if cancel {
-            if let Some(mut e) = self.editor.take() {
-                e.data.zeroize();
-                e.password.zeroize();
-            }
+            self.editor = None; // Drop efface les données de l'éditeur
             return;
         }
         if save {
@@ -1377,7 +1711,7 @@ impl App {
             return;
         }
         let mut open = true;
-        let mut copy = None;
+        let mut copy: Option<Zeroizing<String>> = None;
         egui::Window::new("Générateur").open(&mut open).resizable(false).default_width(440.0).show(ctx, |ui| {
             let g = &mut self.generator;
             let before = (g.passphrase, g.pw.clone().length, g.phrase.words);
@@ -1401,24 +1735,25 @@ impl App {
             let regenerate = ui.button("⟳ Régénérer").clicked();
             if changed || regenerate || g.value.is_empty() || before != (g.passphrase, g.pw.length, g.phrase.words) {
                 let r = if g.passphrase { generator::generate_passphrase(&g.phrase) } else { generator::generate_password(&g.pw) };
-                match r {
-                    Ok(x) => {
-                        g.value.zeroize();
-                        g.value = x.value;
-                    }
-                    Err(e) => g.value = e.to_string(),
-                }
+                g.value.zeroize();
+                g.value = match r {
+                    Ok(x) => x.value,
+                    Err(e) => e.to_string(),
+                };
             }
             ui.separator();
             ui.add(egui::Label::new(RichText::new(&g.value).monospace().size(18.0)).wrap());
             let s = strength::estimate(&g.value);
             ui.label(RichText::new(format!("{} · {} bits", s.label, s.entropy_bits.round())).small().weak());
             if primary(ui, "📋 Copier").clicked() {
-                copy = Some(g.value.clone());
+                copy = Some(Zeroizing::new(g.value.clone()));
             }
         });
         if let Some(v) = copy {
             self.copy(&v, "Mot de passe");
+        }
+        if !open {
+            self.generator.value.zeroize();
         }
         self.generator.open = open;
     }
@@ -1439,4 +1774,33 @@ fn format_date(ts: i64) -> String {
     let m = if mp < 10 { mp + 3 } else { mp - 9 };
     let y = yoe + era * 400 + if m <= 2 { 1 } else { 0 };
     format!("{d:02}/{m:02}/{y}")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sleep_detection_needs_a_focused_window() {
+        assert!(slept(Duration::from_secs(91), true));
+        assert!(!slept(Duration::from_secs(91), false), "fenêtre réduite : pas d'image, pas de faux positif");
+        assert!(!slept(Duration::from_secs(5), true));
+    }
+
+    #[test]
+    fn durations_are_readable() {
+        assert_eq!(fmt_minutes(0), "Jamais");
+        assert_eq!(fmt_minutes(15), "15 min");
+        assert_eq!(fmt_seconds(30), "30 s");
+        assert_eq!(fmt_seconds(120), "2 min");
+        assert_eq!(fmt_seconds(90), "90 s");
+    }
+
+    #[test]
+    fn secrets_are_taken_not_copied() {
+        let mut field = Zeroizing::new(String::from("mot de passe maître"));
+        let taken = take_secret(&mut field);
+        assert!(field.is_empty());
+        assert_eq!(taken.as_str(), "mot de passe maître");
+    }
 }

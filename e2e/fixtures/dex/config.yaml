@@ -1,0 +1,38 @@
+# Fournisseur d'identité OIDC des tests (profil « sso » de docker-compose.e2e.yml).
+# Valeurs de TEST uniquement ; reprises dans fixtures/annuaires.ts.
+issuer: http://dex:5556/dex
+
+storage:
+  type: memory
+
+web:
+  http: 0.0.0.0:5556
+
+telemetry:
+  http: 0.0.0.0:5558
+
+oauth2:
+  skipApprovalScreen: true
+
+expiry:
+  idTokens: 10m
+
+staticClients:
+  - id: locksy-e2e
+    name: Locksy E2E
+    secret: e2e-secret-dex-locksy-0123456789
+    redirectURIs:
+      - http://locksy:8743/api/sso/callback
+
+enablePasswordDB: true
+
+# Mots de passe (bcrypt) : Dex-Marie-2026-essai et Dex-Paul-2026-essai.
+staticPasswords:
+  - email: marie.curie@e2e.test
+    hash: "$2a$14$gOa73Xgr/FQ6F2X5tc3jye20TsTXc/fJyr.OrWTI3VfNpYaVc.Csi"
+    username: marie.curie
+    userID: 18e8400f-523d-4be4-8109-c5d69680d58a
+  - email: paul.durand@e2e.test
+    hash: "$2a$14$jx30h3l1a94xTw09PWzriO7ehhQrLOC8STTIRUQUYSV6SrnEt9cEu"
+    username: paul.durand
+    userID: b89e051c-69dd-4184-b317-dd4a7b7e7aab

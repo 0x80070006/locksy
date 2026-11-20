@@ -1,0 +1,20 @@
+{
+  "errors.ssrf_blocked": "Cette adresse désigne le réseau interne du serveur : elle est refusée par sécurité. Indiquez l'adresse publique de votre fournisseur d'identité, ou demandez à l'hébergeur d'autoriser un fournisseur interne.",
+  "errors.email_mismatch": "Le compte utilisé pour le test n'a pas la même adresse e-mail que votre compte Locksy. Testez avec votre propre compte d'entreprise.",
+  "errors.too_many_deprovisions": "Synchronisation refusée : elle désactiverait trop de comptes d'un coup. Rien n'a été modifié. Vérifiez le groupe et la racine de recherche, ou relevez le seuil de sécurité.",
+  "errors.identity_test_expired": "Le test a pris trop de temps ou a déjà été utilisé. Relancez-le.",
+  "errors.idp_insecure_url": "Le fournisseur d'identité doit être joint par une adresse en https://.",
+  "errors.idp_issuer_mismatch": "L'émetteur annoncé par le fournisseur ne correspond pas à celui saisi. Copiez l'émetteur exact depuis la console de votre fournisseur.",
+  "errors.idp_invalid_response": "La réponse du fournisseur d'identité est illisible. Vérifiez l'adresse de l'émetteur.",
+  "errors.idp_token_refused": "Le fournisseur d'identité a refusé l'échange. Vérifiez l'identifiant client, le secret et l'adresse de retour déclarée chez le fournisseur.",
+  "errors.id_token_invalid": "Le jeton d'identité du fournisseur a été refusé. Réessayez ; si le problème persiste, vérifiez la configuration chez le fournisseur.",
+  "errors.idp_denied": "Le fournisseur d'identité a refusé la connexion.",
+  "errors.idp_unreachable": "Le fournisseur d'identité est injoignable. Vérifiez l'adresse de l'émetteur et la connexion du serveur à Internet.",
+  "errors.email_missing": "Aucune adresse e-mail n'a été transmise pour ce compte. Ajoutez-la chez le fournisseur ou dans l'annuaire.",
+  "errors.ldap_unreachable": "Le contrôleur de domaine est injoignable ou son certificat a été refusé. Vérifiez l'adresse du serveur et le certificat de l'autorité.",
+  "errors.ldap_timeout": "L'annuaire n'a pas répondu à temps. Réessayez dans un instant.",
+  "errors.ldap_bind_refused": "Le compte de service a été refusé par l'annuaire. Vérifiez son identifiant et son mot de passe.",
+  "errors.ldap_search_failed": "La recherche dans l'annuaire a échoué. Vérifiez la racine de recherche, le groupe et les droits du compte de service.",
+  "errors.ldap_empty_result": "L'annuaire n'a renvoyé aucun compte : synchronisation interrompue par sécurité, aucun compte n'a été désactivé. Vérifiez la racine de recherche et le groupe.",
+  "errors.not_in_group": "Ce compte Windows ne fait pas partie du groupe autorisé à utiliser Locksy."
+}

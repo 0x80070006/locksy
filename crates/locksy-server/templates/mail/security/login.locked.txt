@@ -1,0 +1,4 @@
+Connexions bloquées après plusieurs échecs
+Plusieurs tentatives de connexion à votre compte {{org}} ont échoué. Les connexions sont bloquées pendant quelques minutes.
+
+Si ce n'est pas vous, quelqu'un essaie peut-être de deviner votre mot de passe : prévenez votre administrateur.

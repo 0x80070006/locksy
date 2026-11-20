@@ -1,0 +1,5 @@
+Un code de secours a été utilisé
+Un code de secours a remplacé le code de double authentification sur votre compte {{org}}. Ce code ne pourra plus servir.
+
+S'il vous reste peu de codes, créez-en de nouveaux dans vos paramètres.
+Si vous n'avez pas utilisé de code de secours, prévenez sans attendre votre administrateur.

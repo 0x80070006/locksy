@@ -143,7 +143,7 @@ pub fn verify(secret: &[u8], code: &str, unix: u64, last_step: Option<u64>) -> O
     for step in [now_step.saturating_sub(1), now_step, now_step + 1] {
         let expected = format!("{:06}", hotp(secret, step, TotpAlgorithm::Sha1, 6));
         let ok: bool = expected.as_bytes().ct_eq(code.as_bytes()).into();
-        if ok && last_step.map_or(true, |l| step > l) {
+        if ok && last_step.is_none_or(|l| step > l) {
             matched = Some(step);
         }
     }

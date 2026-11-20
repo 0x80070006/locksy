@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Galerie des composants · Locksy</title>
+  <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="stylesheet" href="./gallery.css">
+  <script type="module" src="./gallery.js"></script>
+</head>
+<body>
+  <a class="c-skip-link" href="#contenu">Aller au contenu</a>
+  <header class="l-topbar">
+    <p class="g-brand">Locksy · galerie des composants</p>
+    <nav class="g-themes" aria-label="Apparence de la galerie">
+      <a href="?">Clair</a>
+      <a href="?theme=dark">Sombre</a>
+      <a href="?contrast=more">Contraste renforcé</a>
+      <a href="?theme=dark&amp;contrast=more">Sombre, contraste renforcé</a>
+      <a href="?scale=125">Texte à 125 %</a>
+    </nav>
+  </header>
+  <main id="contenu" class="g-main" tabindex="-1">
+    <h1>Galerie des composants</h1>
+    <p class="u-muted">Chaque composant partagé de web/js/ui/ dans ses états : normal, focus, erreur, désactivé, chargement. Les thèmes se choisissent dans la barre du haut.</p>
+    <div id="galerie" class="l-stack" data-gap="6" aria-busy="true"></div>
+  </main>
+  <div id="status" role="status" class="u-sr-only"></div>
+  <div id="alert" role="alert" class="u-sr-only"></div>
+</body>
+</html>

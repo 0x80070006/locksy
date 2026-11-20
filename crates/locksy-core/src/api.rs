@@ -98,6 +98,9 @@ pub struct LoginResponse {
 pub struct InviteInfo {
     pub email: String,
     pub role: String,
+    /// Nom saisi par l'administrateur (« Prénom Nom »), vide si non renseigné.
+    #[serde(default)]
+    pub name: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -330,6 +333,9 @@ pub struct UpdateUserRequest {
 pub struct CreateInviteRequest {
     pub email: String,
     pub role: String,
+    /// Nom de la personne invitée (« Prénom Nom »), facultatif.
+    #[serde(default)]
+    pub name: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -368,7 +374,11 @@ pub struct AuditPage {
     pub total: i64,
 }
 
+/// Réglages de l'organisation. `serde(default)` : un champ absent du JSON
+/// enregistré (base d'une version antérieure) prend sa valeur par défaut au
+/// lieu de faire échouer la lecture, ce qui remettrait tous les réglages à zéro.
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(default)]
 pub struct OrgSettings {
     pub require_2fa: bool,
     pub session_idle_minutes: i64,
@@ -568,4 +578,150 @@ pub struct LdapSyncReport {
     pub disabled: usize,
     pub enabled: usize,
     pub skipped: Vec<String>,
+}
+
+// ---------------------------------------------------------------- Réglages et préférences
+
+/// Une clé de la politique diffusée aux clients (`/settings/policy`).
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq)]
+#[serde(default)]
+pub struct PolicyEntry {
+    pub value: serde_json::Value,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mode: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub min: Option<serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub max: Option<serde_json::Value>,
+}
+
+/// `GET /settings/policy` (annexe A.4).
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq)]
+#[serde(default)]
+pub struct PolicyResponse {
+    pub revision: i64,
+    pub policy: std::collections::BTreeMap<String, PolicyEntry>,
+}
+
+/// Apparence de l'organisation, avant connexion.
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq)]
+#[serde(default)]
+pub struct PublicBranding {
+    pub org_name: String,
+    pub accent_color: String,
+    /// `/api/branding/logo?v=<révision>`, ou absent : logo de Locksy.
+    pub logo_url: Option<String>,
+    pub login_message: String,
+    pub support_contact: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq)]
+#[serde(default)]
+pub struct PublicLegal {
+    pub notice_url: String,
+    pub privacy_url: String,
+    pub accessibility_url: String,
+    pub login_banner: String,
+    pub charter_version: i64,
+    pub dpo_contact: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq)]
+#[serde(default)]
+pub struct PublicI18n {
+    pub default_locale: String,
+    pub timezone: String,
+}
+
+/// Méthodes de connexion proposées, la principale d'abord.
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq)]
+#[serde(default)]
+pub struct PublicLogin {
+    pub primary_method: String,
+    pub methods: Vec<String>,
+    pub sso_label: Option<String>,
+    pub ldap_label: Option<String>,
+    /// Connexion par mot de passe seul refusée (sauf propriétaires).
+    pub enforced: bool,
+}
+
+/// Politique du mot de passe maître, vérifiée par le client avant l'envoi.
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq)]
+#[serde(default)]
+pub struct PublicMasterPassword {
+    pub min_length: i64,
+    pub min_score: i64,
+    pub forbid_identity: bool,
+    pub banned_words_count: i64,
+    pub banned_words: Vec<String>,
+}
+
+/// Paramètres de dérivation proposés à la création et au changement du mot
+/// de passe maître.
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq)]
+#[serde(default)]
+pub struct PublicKdf {
+    pub memory_mib: i64,
+    pub iterations: i64,
+    pub parallelism: i64,
+    pub upgrade_on_login: bool,
+}
+
+/// `GET /settings/public` (annexe A.5), sans authentification.
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq)]
+#[serde(default)]
+pub struct PublicSettings {
+    pub revision: i64,
+    pub branding: PublicBranding,
+    pub legal: PublicLegal,
+    pub i18n: PublicI18n,
+    pub login: PublicLogin,
+    pub master_password: PublicMasterPassword,
+    pub kdf: PublicKdf,
+}
+
+/// `GET /me/prefs` : document de préférences chiffré par le client (opaque).
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq)]
+#[serde(default)]
+pub struct PrefsDocument {
+    pub revision: i64,
+    pub cipher: String,
+    pub updated_at: i64,
+}
+
+/// `PUT /me/prefs` (en-tête `If-Match` : révision connue, « 0 » à la création).
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq)]
+#[serde(default)]
+pub struct PutPrefsRequest {
+    pub cipher: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq)]
+#[serde(default)]
+pub struct PutPrefsResponse {
+    pub revision: i64,
+}
+
+/// Révisions de la politique et des préférences : le client ne recharge que
+/// ce qui a changé.
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq)]
+#[serde(default)]
+pub struct SyncRevisions {
+    pub policy_revision: i64,
+    pub prefs_revision: i64,
+}
+
+/// `GET /me/charter` : version de la charte exigée et version acceptée
+/// (0 : aucune charte, ou jamais acceptée).
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq)]
+#[serde(default)]
+pub struct CharterStatus {
+    pub required_version: i64,
+    pub accepted_version: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq)]
+#[serde(default)]
+pub struct AcceptCharterRequest {
+    pub version: i64,
 }

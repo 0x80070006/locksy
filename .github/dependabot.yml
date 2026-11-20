@@ -1,0 +1,54 @@
+# Mises à jour proposées chaque semaine (lundi) : dépendances Rust, actions
+# GitHub (épinglées par SHA, Dependabot met à jour le SHA et le commentaire de
+# version) et images Docker.
+#
+# Limite : les images de Dockerfile, Dockerfile.release et Dockerfile.desktop
+# passent par `ARG RUST_IMAGE` / `ARG RUNTIME_IMAGE` ; Dependabot ne suit pas
+# ces valeurs. Leur mise à jour est manuelle (tag + empreinte), avec
+# rust-toolchain.toml (voir le job clippy de ci.yml, « toolchain cohérente »).
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    groups:
+      # Correctifs regroupés ; les montées de version mineure ou majeure
+      # restent des PR séparées, à relire une par une.
+      correctifs-rust:
+        update-types: [patch]
+    commit-message:
+      prefix: "deps(rust)"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "ci"
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "deps(docker)"
+
+  # Fichiers compose : image Caddy du déploiement sur site (deploiement/) et
+  # docker-compose.yml racine.
+  - package-ecosystem: docker-compose
+    directories:
+      - /
+      - /deploiement
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "deps(docker)"

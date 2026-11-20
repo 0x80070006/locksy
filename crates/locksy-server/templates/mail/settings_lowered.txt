@@ -1,0 +1,9 @@
+Réglages de sécurité abaissés sur {{org}}
+
+Bonjour,
+
+{{actor}} vient d'abaisser des réglages de sécurité de l'organisation (révision {{revision}}).
+
+Réglages concernés : {{keys}}
+
+Si ce changement n'était pas prévu, vérifiez l'historique des réglages dans l'administration et rétablissez la version précédente.

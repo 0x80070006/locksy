@@ -1,0 +1,80 @@
+# Mots anglais interdits à l'écran (fixture textGuard, cahier §2.11 : « aucun
+# anglais »). Un mot par ligne, comparé en mot entier, sans tenir compte de la
+# casse. Les adresses e-mail et les URL sont retirées du texte avant la
+# comparaison. Le volet « Détails techniques » ([data-technical]) est exclu.
+# N'ajoutez pas de mot qui existe aussi en français courant (« message »,
+# « type », « code », « note », « session », « options », « invitation »).
+account
+admin
+backup
+cancel
+checkbox
+copied
+dashboard
+delete
+deleted
+disable
+disabled
+download
+edit
+email
+enable
+enabled
+error
+errors
+failed
+failure
+false
+feedback
+filter
+folder
+folders
+generator
+health
+invalid
+item
+items
+loading
+locked
+login
+logout
+owner
+password
+passwords
+paste
+profile
+refresh
+request
+response
+retry
+role
+save
+saved
+search
+settings
+share
+shared
+shares
+sharing
+sign in
+sign up
+signin
+signup
+submit
+success
+timeout
+token
+tokens
+trash
+true
+unknown
+unlock
+update
+updated
+upload
+user
+username
+users
+vault
+vaults
+warning

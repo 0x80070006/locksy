@@ -1,0 +1,3 @@
+{
+  "errors.audit_chain_unavailable": "La vérification du journal est indisponible : la clé de chaînage n'est pas chargée sur le serveur. Contactez l'hébergeur de Locksy."
+}

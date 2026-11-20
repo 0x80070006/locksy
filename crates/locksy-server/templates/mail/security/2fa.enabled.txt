@@ -1,0 +1,4 @@
+Double authentification activée
+La double authentification est maintenant active sur votre compte {{org}} : chaque connexion demandera un code en plus de votre mot de passe maître.
+
+Si vous n'êtes pas à l'origine de ce changement, prévenez sans attendre votre administrateur.

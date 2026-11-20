@@ -5,12 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
-  <title>Secret partagé · Locksy</title>
+  <title>Locksy</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/css/app.css">
   <script type="module" src="/js/share.js"></script>
 </head>
 <body>
-  <main id="app"></main>
+  <main id="app" tabindex="-1"></main>
+  <div id="status" role="status" class="u-sr-only"></div>
+  <div id="alert" role="alert" class="u-sr-only"></div>
+  <div id="toasts" class="c-toasts"></div>
+  <noscript>Locksy a besoin de JavaScript : le secret est déchiffré dans votre navigateur.</noscript>
 </body>
 </html>

@@ -1,21 +1,57 @@
 name: locksy
 
+# Sauvegarde à chaud, vérifiée (le serveur reste démarré) :
+#   docker compose exec locksy mkdir -p /data/backups
+#   docker compose exec locksy /app/locksy-server backup /data/backups/locksy-$(date +%F).db
+#   docker compose cp locksy:/data/backups/locksy-$(date +%F).db ./
+# ou, avec test de restauration, rotation et chiffrement age/gpg :
+#   sudo scripts/backup-locksy.sh --docker locksy --dest /var/backups/locksy
+# Voir docs/Sauvegarde-et-mises-a-jour.md.
+
 services:
   locksy:
     build: .
-    image: locksy:1.0.0
+    image: locksy:1.1.0
     container_name: locksy
     restart: unless-stopped
-    # Accessible uniquement depuis ce poste. Pour un accès réseau, placez un
-    # proxy inverse TLS devant (voir README) plutôt que d'exposer ce port.
+    # Arrêt gracieux : délai de grâce (LOCKSY_SHUTDOWN_GRACE_SECS) + point de
+    # contrôle de la base + vidage du journal syslog. Le défaut de Docker (10 s)
+    # ne laisse pas le temps de finir proprement.
+    stop_grace_period: 25s
+    # HTTP en clair, accessible seulement depuis ce poste. Le réseau passe par le
+    # proxy HTTPS Caddy (service proxy, port 443) : n'exposez pas ce port.
     ports:
       - "127.0.0.1:8743:8743"
     volumes:
       - locksy-data:/data
     environment:
-      LOCKSY_TRUST_PROXY: "false"
+      LOCKSY_TRUST_PROXY: "true"
+      LOCKSY_TRUSTED_PROXIES: "172.16.0.0/12"
+      # Derrière une chaîne de proxys : IP ou réseaux de confiance (effet si TRUST_PROXY=true) :
+      # LOCKSY_TRUSTED_PROXIES: "10.0.0.0/8,192.168.1.10"
+      # Jeton d'installation imposé (sinon lisible par : docker exec locksy cat /data/setup-token) :
+      # LOCKSY_SETUP_TOKEN: "au-moins-20-caracteres-aleatoires"
+      # Charge : calculs Argon2 simultanés, file d'attente (503 au-delà), délais (s) :
+      # LOCKSY_ARGON2_CONCURRENCY: "2"
+      # LOCKSY_ARGON2_QUEUE: "16"
+      # LOCKSY_REQUEST_TIMEOUT_SECS: "120"
+      # LOCKSY_HEADER_TIMEOUT_SECS: "15"
       # Envoi du journal d'audit vers votre SIEM (Graylog, Sekoia, Splunk, rsyslog…) :
       # LOCKSY_SYSLOG: "udp://siem.entreprise.local:514"
+      # ... ou chiffré en TLS, avec au besoin une autorité interne (fichier PEM monté) :
+      # LOCKSY_SYSLOG: "tcp+tls://siem.entreprise.local:6514"
+      # LOCKSY_SYSLOG_CA_FILE: "/data/siem-ca.pem"
+      # Exploitation : journal JSON, délai de grâce à l'arrêt (s, 0 à 300), lecteurs SQLite (1 à 64) :
+      # LOCKSY_LOG_FORMAT: "json"
+      # LOCKSY_SHUTDOWN_GRACE_SECS: "10"
+      # LOCKSY_DB_READERS: "4"
+      # Clé serveur ailleurs que dans /data (défaut /data/server.key) ; RESET=true
+      # régénère une clé alors que des comptes existent (dernier recours : 2FA,
+      # liaison AD et SSO à reconfigurer) :
+      # LOCKSY_SERVER_KEY_FILE: "/run/secrets/locksy-server-key"
+      # LOCKSY_SERVER_KEY_RESET: "false"
+      # Toute valeur illisible arrête le démarrage (code 2) ; vérification sans
+      # démarrer : docker compose run --rm locksy check
       # Fournisseur SSO local en http, pour un essai uniquement (jamais en production) :
       # LOCKSY_SSO_ALLOW_HTTP: "true"
     read_only: true
@@ -28,5 +64,31 @@ services:
     mem_limit: 512m
     pids_limit: 128
 
+  proxy:
+    image: caddy:2.11.9-alpine@sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20faefb9f61126836f0
+    container_name: locksy-proxy
+    restart: unless-stopped
+    ports:
+      - "443:443"
+    volumes:
+      - ./deploiement/Caddyfile.lan:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - locksy
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 256m
+    pids_limit: 256
+
 volumes:
   locksy-data:
+  caddy-data:
+  caddy-config:

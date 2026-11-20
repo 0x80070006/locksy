@@ -1,7 +1,12 @@
 # syntax=docker/dockerfile:1
 # Compile le client de bureau Windows (locksy.exe) depuis Linux, avec MinGW.
-# Usage : docker build -f Dockerfile.desktop --target export --output type=local,dest=dist .
-FROM rust:1-trixie AS build
+# Usage : docker build -f Dockerfile.desktop --target export \
+#           --build-arg SOURCE_DATE_EPOCH=$(git log -1 --format=%ct) \
+#           --output type=local,dest=dist .
+# Image de compilation épinglée par version ET par empreinte ; la version de
+# Rust doit rester celle de rust-toolchain.toml (vérifié par la CI).
+ARG RUST_IMAGE=rust:1.100.0-trixie@sha256:e19840879045c951c905d0eaa9887f3439c62000e429963371b376bac8d38c31
+FROM ${RUST_IMAGE} AS build
 # HTTPS : certains filtres réseau d'entreprise coupent ce paquet en HTTP.
 RUN sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.list.d/debian.sources \
  && apt-get -o Acquire::Retries=8 update \
@@ -9,6 +14,11 @@ RUN sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.l
       gcc-mingw-w64-x86-64-win32 binutils-mingw-w64-x86-64 \
  && rm -rf /var/lib/apt/lists/* \
  && rustup target add x86_64-pc-windows-gnu
+# Compilation reproductible : horodatage fixé par l'appelant, pas de
+# compilation incrémentale, chemins absolus de la machine retirés du binaire.
+ARG SOURCE_DATE_EPOCH
+ENV CARGO_INCREMENTAL=0 \
+    RUSTFLAGS="--remap-path-prefix=/src=. --remap-path-prefix=/usr/local/cargo=/cargo"
 WORKDIR /src
 COPY Cargo.toml Cargo.lock ./
 COPY crates ./crates

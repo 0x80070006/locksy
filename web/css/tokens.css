@@ -1,0 +1,208 @@
+/* Fichier généré par tools/gen-tokens.mjs, ne pas modifier. Source : design/tokens.json. */
+
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+  --color-bg: #f4f6f9;
+  --color-surface: #ffffff;
+  --color-sunken: #eef2f6;
+  --color-sel: #e2f1ee;
+  --color-text: #142033;
+  --color-text-muted: #4f5e72;
+  --color-border: #e4e8ee;
+  --color-border-strong: #7b8899;
+  --color-accent: #0d6b64;
+  --color-accent-hover: #0a554f;
+  --color-on-accent: #ffffff;
+  --color-accent-soft: #d9f0ec;
+  --color-accent-text: #0a5851;
+  --color-ok: #176a42;
+  --color-ok-bg: #e3f4ea;
+  --color-warn: #8a5800;
+  --color-warn-bg: #fbf0d8;
+  --color-danger: #b3261e;
+  --color-danger-bg: #fbe6e4;
+  --color-info: #1f5fa8;
+  --color-info-bg: #e4eefa;
+  --color-focus: #1d5fd1;
+  --color-scrim: rgb(20 32 51 / 0.45);
+  --color-on-tile: #ffffff;
+  --color-qr-bg: #ffffff;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: #0b1016;
+  --color-surface: #121922;
+  --color-sunken: #18212c;
+  --color-sel: #13302c;
+  --color-text: #e6edf3;
+  --color-text-muted: #9aa7b4;
+  --color-border: #243040;
+  --color-border-strong: #66768a;
+  --color-accent: #2dd4bf;
+  --color-accent-hover: #5eead4;
+  --color-on-accent: #04201c;
+  --color-accent-soft: #13302c;
+  --color-accent-text: #5eead4;
+  --color-ok: #6fd3a0;
+  --color-ok-bg: #163426;
+  --color-warn: #f0c068;
+  --color-warn-bg: #3a2d12;
+  --color-danger: #ff9b92;
+  --color-danger-bg: #3d1c1a;
+  --color-info: #8ab8f0;
+  --color-info-bg: #14263d;
+  --color-focus: #8ab4ff;
+  --color-scrim: rgb(0 0 0 / 0.6);
+  --color-on-tile: #ffffff;
+  --color-qr-bg: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --color-bg: #0b1016;
+    --color-surface: #121922;
+    --color-sunken: #18212c;
+    --color-sel: #13302c;
+    --color-text: #e6edf3;
+    --color-text-muted: #9aa7b4;
+    --color-border: #243040;
+    --color-border-strong: #66768a;
+    --color-accent: #2dd4bf;
+    --color-accent-hover: #5eead4;
+    --color-on-accent: #04201c;
+    --color-accent-soft: #13302c;
+    --color-accent-text: #5eead4;
+    --color-ok: #6fd3a0;
+    --color-ok-bg: #163426;
+    --color-warn: #f0c068;
+    --color-warn-bg: #3a2d12;
+    --color-danger: #ff9b92;
+    --color-danger-bg: #3d1c1a;
+    --color-info: #8ab8f0;
+    --color-info-bg: #14263d;
+    --color-focus: #8ab4ff;
+    --color-scrim: rgb(0 0 0 / 0.6);
+    --color-on-tile: #ffffff;
+    --color-qr-bg: #ffffff;
+  }
+}
+
+/* Contraste renforcé choisi */
+
+[data-contrast="more"] {
+  --color-text-muted: #142033;
+  --color-border: #7b8899;
+  --color-border-strong: #4a5566;
+  --color-accent: #14544a;
+  --color-focus: #0b3fa8;
+}
+
+[data-theme="dark"][data-contrast="more"] {
+  --color-text-muted: #e5ebf2;
+  --color-border: #6a7c91;
+  --color-border-strong: #9aa9bb;
+  --color-accent: #7dd3c1;
+  --color-focus: #b3cdff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"])[data-contrast="more"] {
+    --color-text-muted: #e5ebf2;
+    --color-border: #6a7c91;
+    --color-border-strong: #9aa9bb;
+    --color-accent: #7dd3c1;
+    --color-focus: #b3cdff;
+  }
+}
+
+/* Contraste renforcé du système */
+
+@media (prefers-contrast: more) {
+  :root:not([data-contrast]) {
+    --color-text-muted: #142033;
+    --color-border: #7b8899;
+    --color-border-strong: #4a5566;
+    --color-accent: #14544a;
+    --color-focus: #0b3fa8;
+  }
+  [data-theme="dark"]:not([data-contrast]) {
+    --color-text-muted: #e5ebf2;
+    --color-border: #6a7c91;
+    --color-border-strong: #9aa9bb;
+    --color-accent: #7dd3c1;
+    --color-focus: #b3cdff;
+  }
+}
+
+@media (prefers-contrast: more) and (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-contrast]) {
+    --color-text-muted: #e5ebf2;
+    --color-border: #6a7c91;
+    --color-border-strong: #9aa9bb;
+    --color-accent: #7dd3c1;
+    --color-focus: #b3cdff;
+  }
+}
+
+/* Typographie, espacements, rayons, ombres, mouvement, dimensions */
+
+:root {
+  --font-sans: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Cascadia Mono", Consolas, "SF Mono", Menlo, monospace;
+  --text-xs: 0.8125rem;
+  --leading-xs: 1.4;
+  --text-sm: 0.875rem;
+  --leading-sm: 1.45;
+  --text-md: 1rem;
+  --leading-md: 1.5;
+  --text-lg: 1.125rem;
+  --leading-lg: 1.4;
+  --text-xl: 1.375rem;
+  --leading-xl: 1.3;
+  --text-2xl: 1.75rem;
+  --leading-2xl: 1.2;
+  --text-secret: 1.25rem;
+  --leading-secret: 1.3;
+  --text-code: 1.5rem;
+  --leading-code: 1.2;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 999px;
+  --shadow-1: 0 1px 2px rgb(20 32 51 / 0.04);
+  --shadow-2: 0 12px 32px rgb(20 32 51 / 0.10);
+  --shadow-3: 0 24px 56px rgb(20 32 51 / 0.18);
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --control-h: 2.75rem;
+  --target-min: 2rem;
+  --row-h: 4rem;
+  --measure: 68ch;
+  --sidebar-w: 16.5rem;
+  --list-w: 24rem;
+  --drawer-w: 30rem;
+  --detail-max: 47.5rem;
+}
+
+@media (pointer: coarse) {
+  :root {
+    --control-h: 3rem;
+    --target-min: 2.75rem;
+  }
+}
+
+[data-density="compact"] {
+  --row-h: 3rem;
+}

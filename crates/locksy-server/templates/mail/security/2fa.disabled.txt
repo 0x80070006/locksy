@@ -1,0 +1,4 @@
+Double authentification désactivée
+La double authentification a été retirée de votre compte {{org}}. Votre compte n'est plus protégé que par votre mot de passe maître.
+
+Si vous n'êtes pas à l'origine de ce changement, prévenez sans attendre votre administrateur.

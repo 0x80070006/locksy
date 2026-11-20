@@ -1,0 +1,7 @@
+{{event_subject}}
+
+Bonjour,
+
+{{event_text}}
+
+Date : {{date}}

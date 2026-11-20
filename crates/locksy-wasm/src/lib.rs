@@ -7,6 +7,13 @@
 //!
 //! Les clés restent dans la mémoire WebAssembly : JavaScript ne manipule que
 //! des numéros de poignée. `clear` efface tout le trousseau au verrouillage.
+//!
+//! Les opérations d'import (`import_kdbx`, `import_bitwarden_json`, fonction
+//! « import », active par défaut) sont appelées depuis un Worker
+//! (web/js/import-worker.js) ; en cas d'échec, `error` vaut le code stable
+//! de `ImportError` (`wrong_password`…). Elles pèsent environ 320 Ko :
+//! `--no-default-features` produit un module principal sans elles, dans le
+//! budget du front, le Worker chargeant alors `locksy-import.wasm`.
 
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -14,9 +21,14 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use locksy_core::crypto::{self, KdfParams, SecretKey};
 use locksy_core::encoding::{b64d_array, b64e};
+#[cfg(feature = "import")]
+use locksy_core::import::{bitwarden, kdbx, ImportError};
 use locksy_core::generator::{self, PassphraseOptions, PasswordOptions};
 use locksy_core::{strength, totp};
+use sha2::{Digest, Sha256};
 use zeroize::Zeroize;
+#[cfg(feature = "import")]
+use zeroize::Zeroizing;
 
 // --------------------------------------------------------------- Aléa
 
@@ -145,6 +157,16 @@ enum Request {
     ProtectExport { password: String, plaintext: String },
     UnprotectExport { password: String, data: String },
     NewUuid,
+    /// Base KDBX (contenu en base64, alphabet standard ou URL, remplissage
+    /// facultatif) ; fichier clé facultatif, même encodage.
+    #[cfg(feature = "import")]
+    ImportKdbx { data_b64: String, password: String, #[serde(default)] keyfile_b64: Option<String> },
+    /// Export JSON (chiffré par mot de passe ou en clair).
+    #[cfg(feature = "import")]
+    ImportBitwardenJson { text: String, password: String },
+    /// Preuve de possession d'un lien sécurisé (contrat C5) : `key` est le
+    /// texte exact du fragment du lien.
+    ShareProof { key: String },
 }
 
 fn handle(input: &[u8]) -> String {
@@ -261,7 +283,55 @@ fn run(req: Request) -> Result<Value, String> {
             json!(String::from_utf8(bytes.to_vec()).map_err(|_| "export illisible".to_string())?)
         }
         Request::NewUuid => json!(crypto::new_uuid()),
+        #[cfg(feature = "import")]
+        Request::ImportKdbx { data_b64, mut password, keyfile_b64 } => {
+            let data = b64_any(&data_b64);
+            let keyfile = keyfile_b64.as_deref().map(b64_any).transpose();
+            let result = match (data, keyfile) {
+                (Ok(data), Ok(keyfile)) => kdbx::read_kdbx(&data, &password, keyfile.as_deref().map(|k| k.as_slice())),
+                _ => Err(ImportError::Corrupt),
+            };
+            password.zeroize();
+            json!(result.map_err(import_err)?)
+        }
+        #[cfg(feature = "import")]
+        Request::ImportBitwardenJson { mut text, mut password } => {
+            let result = bitwarden::read_bitwarden_json(&text, &password);
+            text.zeroize();
+            password.zeroize();
+            json!(result.map_err(import_err)?)
+        }
+        Request::ShareProof { mut key } => {
+            let proof = Sha256::digest(key.as_bytes());
+            key.zeroize();
+            let verifier: String = Sha256::digest(proof).iter().map(|b| format!("{b:02x}")).collect();
+            json!({ "proof": b64e(&proof), "verifier": verifier })
+        }
     })
+}
+
+#[cfg(feature = "import")]
+/// Code stable de l'erreur d'import, renvoyé tel quel à JavaScript.
+fn import_err(e: ImportError) -> String {
+    e.code().to_string()
+}
+
+#[cfg(feature = "import")]
+/// Base64 tolérant : alphabet standard ou URL, remplissage facultatif.
+fn b64_any(s: &str) -> Result<Zeroizing<Vec<u8>>, ()> {
+    use base64::engine::{general_purpose::GeneralPurpose, DecodePaddingMode, GeneralPurposeConfig};
+    use base64::Engine;
+    const ENGINE: GeneralPurpose = GeneralPurpose::new(
+        &base64::alphabet::STANDARD,
+        GeneralPurposeConfig::new().with_decode_padding_mode(DecodePaddingMode::Indifferent),
+    );
+    let s = s.trim();
+    let decoded = if s.contains(['-', '_']) {
+        ENGINE.decode(s.replace('-', "+").replace('_', "/"))
+    } else {
+        ENGINE.decode(s)
+    };
+    decoded.map(Zeroizing::new).map_err(|_| ())
 }
 
 #[cfg(test)]
@@ -286,7 +356,65 @@ mod tests {
     }
 
     #[test]
+    fn share_proof_vecteurs() {
+        // Valeurs calculées indépendamment (SHA-256 de Node.js).
+        let r = call(json!({"op":"share_proof","key":"abc"}));
+        assert_eq!(r["result"]["proof"], "ungWv48Bz-pBQUDeXa4iI7ADYaOWF3qctBD_YfIAFa0");
+        assert_eq!(r["result"]["verifier"], "4f8b42c22dd3729b519ba6f68d2da7cc5b2d606d05daed5ad5128cc03e6c6358");
+        let r = call(json!({"op":"share_proof","key":"Zm9vYmFy-_clé"}));
+        assert_eq!(r["result"]["proof"], "2Fx55nHgqOXXqAbgnunrmBYHp6gCnf51r3owAZXewBI");
+        assert_eq!(r["result"]["verifier"], "00107c15907b03bc852169910ce00d5a0f9b8e4fec40e3a3e574f48b3ec60e3e");
+    }
+
+    #[cfg(feature = "import")]
+    #[test]
+    fn import_codes_d_erreur_stables() {
+        let r = call(json!({"op":"import_kdbx","data_b64":"UEsDBA==","password":"x"}));
+        assert_eq!(r, json!({"ok": false, "error": "unsupported_format"}));
+        let r = call(json!({"op":"import_kdbx","data_b64":"%%%","password":"x"}));
+        assert_eq!(r["error"], "corrupt");
+        let r = call(json!({"op":"import_bitwarden_json","text":"bonjour","password":"x"}));
+        assert_eq!(r["error"], "unsupported_format");
+    }
+
+    #[cfg(feature = "import")]
+    #[test]
+    fn import_export_en_clair() {
+        let text = json!({
+            "encrypted": false,
+            "folders": [{ "id": "f", "name": "Perso" }],
+            "items": [{ "id": "i", "folderId": "f", "type": 1, "name": "Site", "login": { "username": "u", "password": "a;b
+c" } }]
+        });
+        let r = call(json!({"op":"import_bitwarden_json","text":text.to_string(),"password":""}));
+        assert_eq!(r["ok"], true, "{r}");
+        let item = &r["result"]["items"][0];
+        assert_eq!(item["folder"], "Perso");
+        assert_eq!(item["source_id"], "i");
+        assert_eq!(item["data"]["kind"], "login");
+        assert_eq!(item["data"]["password"], "a;b
+c");
+        assert_eq!(r["result"]["folders"], json!(["Perso"]));
+        assert_eq!(r["result"]["warnings"], json!([]));
+    }
+
+    #[cfg(feature = "import")]
+    #[test]
+    fn base64_tolerant() {
+        assert_eq!(b64_any("+/8=").unwrap().as_slice(), &[0xfb, 0xff]);
+        assert_eq!(b64_any("-_8").unwrap().as_slice(), &[0xfb, 0xff]);
+        assert!(b64_any("pas valide!").is_err());
+    }
+
+    #[test]
     fn unknown_op_is_an_error() {
         assert_eq!(call(json!({"op":"nope"}))["ok"], false);
+    }
+
+    #[cfg(not(feature = "import"))]
+    #[test]
+    fn module_principal_sans_import() {
+        let r = call(json!({"op":"import_bitwarden_json","text":"{}","password":""}));
+        assert_eq!(r["ok"], false);
     }
 }

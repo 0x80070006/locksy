@@ -1,0 +1,175 @@
+/* Locksy : habillage « aéré ». Chargé en dernier : il n'ajoute que des espaces, des rayons et des
+   états plus doux ; aucune couleur de texte n'est changée (contrastes vérifiés par tools/check-contrast.mjs).
+   Principes : une seule couleur d'accent, surfaces plates séparées par des filets, peu d'ombres,
+   cibles généreuses, texte à 16 px minimum, titres sobres. */
+
+body { line-height: 1.6; -webkit-font-smoothing: antialiased; }
+h1 { font-size: var(--text-2xl); line-height: var(--leading-2xl); letter-spacing: -0.01em; }
+h2 { font-size: var(--text-xl); line-height: var(--leading-xl); letter-spacing: -0.005em; }
+h3, h4 { font-size: var(--text-md); }
+.u-muted { line-height: 1.5; }
+
+/* ------------------------------------------------------------ Coquille */
+.l-sidebar { padding: var(--space-4) var(--space-3); border-inline-end-color: var(--color-border); }
+.l-topbar { min-block-size: 4rem; padding: var(--space-3) var(--space-5); gap: var(--space-3); border-block-end-color: var(--color-border); }
+
+/* Contenu des pages : une colonne confortable, centrée. Les vues en deux volets (coffre) restent pleine page. */
+#contenu { inline-size: 100%; }
+#contenu:not(:has(> .l-split, > .l-view > .l-split)) {
+  box-sizing: border-box; max-inline-size: 76rem; margin-inline: auto;
+  padding: var(--space-6) var(--space-6) var(--space-7);
+}
+@media (width < 37.5em) {
+  .l-topbar { padding: var(--space-2) var(--space-3); }
+  #contenu:not(:has(> .l-split, > .l-view > .l-split)) { padding: var(--space-5) var(--space-4) var(--space-7); }
+}
+.a-page.l-stack { --stack-gap: var(--space-5); }
+
+/* ------------------------------------------------------------ Navigation */
+.c-sidenav { gap: var(--space-1); }
+.c-sidenav__group { padding: var(--space-5) var(--space-3) var(--space-2); letter-spacing: 0.04em; text-transform: none; font-size: var(--text-sm); font-weight: 600; }
+.c-sidenav__item { min-block-size: 2.75rem; padding: var(--space-2) var(--space-4); border-radius: var(--radius-md); font-weight: 500; }
+.c-sidenav__item:is([aria-current="page"], [aria-current="true"]) { box-shadow: none; }
+
+/* ------------------------------------------------------------ Surfaces */
+.c-card, .c-stat, .c-status { box-shadow: none; border-radius: var(--radius-lg); }
+.c-card { padding: var(--space-6); gap: var(--space-5); }
+.c-status { padding: var(--space-5); }
+.c-alert { padding: var(--space-4) var(--space-5); border-radius: var(--radius-md); }
+.c-dialog { border-radius: var(--radius-xl); box-shadow: var(--shadow-3); }
+.c-dialog__form { gap: var(--space-5); padding: var(--space-6); }
+.c-panel__head, .c-panel__actions { padding: var(--space-4) var(--space-5); }
+.c-panel__body { gap: var(--space-5); padding: var(--space-5); }
+
+/* Tuiles de chiffres : lisibles d'un coup d'œil ; cliquables (bouton) avec un état net */
+.l-grid { gap: var(--space-5); grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr)); }
+.c-stat { gap: var(--space-2); padding: var(--space-5); transition: border-color var(--duration-fast) var(--ease), background var(--duration-fast) var(--ease); }
+.c-stat__value { font-size: 2rem; line-height: 1.15; letter-spacing: -0.01em; }
+button.c-stat:hover { background: var(--color-sunken); }
+button.c-stat[aria-pressed="true"] { background: var(--color-accent-soft); }
+
+/* ------------------------------------------------------------ Boutons et champs */
+.c-button { padding: 0 var(--space-5); border-radius: var(--radius-md); transition: background var(--duration-fast) var(--ease), border-color var(--duration-fast) var(--ease); }
+.c-button--icon { padding: 0; }
+.c-button--primary { box-shadow: none; }
+.c-field { gap: var(--space-2); }
+.c-field__label { font-size: var(--text-md); }
+.c-input, .c-select, .c-textarea, .c-chips { padding: 0 var(--space-4); border-radius: var(--radius-md); }
+.c-textarea { padding-block: var(--space-3); }
+.c-input:focus-visible, .c-select:focus-visible, .c-textarea:focus-visible { outline-offset: 0; border-color: var(--color-accent); }
+.c-segmented label { padding: 0 var(--space-4); }
+
+/* ------------------------------------------------------------ Listes et tableaux */
+.c-item-list__row { gap: var(--space-4); padding: var(--space-3) var(--space-5); }
+.c-avatar { inline-size: 2.5rem; block-size: 2.5rem; border-radius: var(--radius-md); }
+.c-secret-row { padding: var(--space-4) var(--space-5); }
+.c-table__scroll { border-radius: var(--radius-lg); }
+.c-table { font-size: var(--text-md); }
+.c-table caption { padding: var(--space-4) var(--space-5); font-size: var(--text-lg); }
+.c-table :is(th, td) { padding: var(--space-3) var(--space-5); }
+.c-table th { font-size: var(--text-sm); color: var(--color-text-muted); background: var(--color-sunken); }
+.a-page .c-table :is(th, td) { padding: var(--space-3) var(--space-4); }
+
+/* ------------------------------------------------------------ Écrans d'accès */
+.l-auth { padding: var(--space-7) var(--space-4); }
+.l-auth__card { max-inline-size: min(100%, 28rem); padding: var(--space-7) var(--space-6); box-shadow: var(--shadow-2); border-radius: var(--radius-xl); }
+.l-auth__card h1 { margin-block-end: var(--space-2); }
+@media (width < 37.5em) {
+  .l-auth { padding: var(--space-4); }
+  .l-auth__card { padding: var(--space-6) var(--space-5); box-shadow: none; }
+}
+
+/* Réglages d'administration : sections plus lisibles */
+.a-settings { gap: var(--space-6); }
+.a-settings__content { max-inline-size: min(100%, 52rem); }
+
+/* ------------------------------------------------------------ Couleur : base neutre, zones et mesures colorées
+   Fond et barre latérale neutres ; le teal reste la couleur des actions (boutons, liens) ;
+   la zone Administration a sa propre teinte (indigo) ; chaque mesure a sa couleur et sa note
+   (vert, orange, rouge) selon sa valeur. */
+:root {
+  --zone-pw: #0d9488; --zone-pw-soft: #e6f6f4; --zone-pw-text: #0b5f58;
+  --zone-admin: #4f46e5; --zone-admin-soft: #eef0ff; --zone-admin-text: #3730a3;
+  --side-bg: #ffffff;
+}
+[data-theme="dark"] {
+  --zone-pw: #2dd4bf; --zone-pw-soft: rgb(45 212 191 / 0.13); --zone-pw-text: #5eead4;
+  --zone-admin: #818cf8; --zone-admin-soft: rgb(129 140 248 / 0.15); --zone-admin-text: #c7d2fe;
+  --side-bg: #0f151d;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --zone-pw: #2dd4bf; --zone-pw-soft: rgb(45 212 191 / 0.13); --zone-pw-text: #5eead4;
+    --zone-admin: #818cf8; --zone-admin-soft: rgb(129 140 248 / 0.15); --zone-admin-text: #c7d2fe;
+    --side-bg: #0f151d;
+  }
+}
+
+/* Barre latérale : deux zones cloisonnées (Mots de passe, Administration) */
+.l-sidebar { background: var(--side-bg); color: var(--color-text); border-inline-end: 1px solid var(--color-border); }
+.l-sidebar > .c-sidenav { padding: var(--space-2); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); }
+.l-sidebar > .c-sidenav > .c-sidenav__group:first-child { padding-block-start: var(--space-2); }
+.l-sidebar .c-sidenav__group { display: flex; align-items: center; gap: var(--space-2); color: var(--color-text-muted); }
+.l-sidebar > .c-sidenav > .c-sidenav__group:first-child::before { content: ""; inline-size: 0.5rem; block-size: 0.5rem; border-radius: 50%; background: var(--zone-pw); }
+.l-sidebar .c-sidenav--admin > .c-sidenav__group:first-child::before { background: var(--zone-admin); }
+.l-sidebar .c-sidenav__item { color: var(--color-text); }
+.l-sidebar .c-sidenav__item:hover { background: var(--color-sunken); }
+.l-sidebar .c-sidenav__item .c-icon { color: var(--color-text-muted); }
+.l-sidebar .c-sidenav__item:is([aria-current="page"], [aria-current="true"]) { background: var(--zone-pw-soft); color: var(--zone-pw-text); box-shadow: inset 3px 0 0 var(--zone-pw); }
+.l-sidebar .c-sidenav__item:is([aria-current="page"], [aria-current="true"]) .c-icon { color: var(--zone-pw); }
+.l-sidebar .c-sidenav--admin { border-color: color-mix(in srgb, var(--zone-admin) 30%, var(--color-border)); }
+.l-sidebar .c-sidenav--admin .c-sidenav__item:is([aria-current="page"], [aria-current="true"]) { background: var(--zone-admin-soft); color: var(--zone-admin-text); box-shadow: inset 3px 0 0 var(--zone-admin); }
+.l-sidebar .c-sidenav--admin .c-sidenav__item:is([aria-current="page"], [aria-current="true"]) .c-icon { color: var(--zone-admin); }
+.l-sidebar :is(.c-sidenav__count, .u-muted) { color: var(--color-text-muted); }
+
+/* Administration : la navigation est dans la barre latérale ; colonne de gauche seulement s'il y a une sous-navigation */
+.a-page .a-settings:not(:has(.a-aside .c-sidenav:not([hidden]))) { grid-template-columns: minmax(0, 1fr); }
+.a-page .a-settings:not(:has(.a-aside .c-sidenav:not([hidden]))) > .a-aside { order: 2; }
+.a-banner { border-radius: var(--radius-md); background: var(--zone-admin-soft); color: var(--zone-admin-text); }
+
+/* Barre du haut : actions à droite (thème, compte) */
+.l-topbar { background: var(--color-surface); }
+.l-topbar__end { display: flex; align-items: center; gap: var(--space-2); margin-inline-start: auto; }
+.c-account-btn { padding: 0 var(--space-1); border-radius: var(--radius-full); }
+.c-account-btn .c-avatar { border-radius: var(--radius-full); inline-size: 2.25rem; block-size: 2.25rem; }
+.c-theme-btn { border-radius: var(--radius-full); }
+
+/* ------------------------------------------------------------ Tableau de bord */
+.c-dash { display: grid; gap: var(--space-5); align-items: stretch; }
+@media (width >= 56.25em) { .c-dash { grid-template-columns: minmax(16rem, 22rem) minmax(0, 1fr); } }
+.c-dash__tiles { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fill, minmax(min(100%, 13.5rem), 1fr)); }
+
+.c-stat { position: relative; overflow: hidden; }
+.c-stat--metric, .c-stat--hero { display: grid; gap: var(--space-3); align-content: start; text-align: start; }
+.c-stat--metric::before, .c-stat--hero::before { content: ""; position: absolute; inset: 0 0 auto; block-size: 3px; background: var(--tone, var(--color-border)); }
+.c-stat__head { display: flex; align-items: center; gap: var(--space-3); }
+.c-stat__icon { display: inline-grid; place-items: center; inline-size: 2.25rem; block-size: 2.25rem; flex: none; border-radius: var(--radius-md); color: var(--hue); background: color-mix(in srgb, var(--hue) 14%, transparent); }
+.c-stat__value { color: var(--tone, var(--color-text)); }
+[data-tone="neutral"] .c-stat__value, .c-stat[data-tone="neutral"] > .c-stat__value { color: var(--color-text); }
+.c-stat__bar { display: block; block-size: 0.375rem; border-radius: var(--radius-full); background: var(--color-sunken); overflow: hidden; }
+.c-stat__bar > span { display: block; block-size: 100%; border-radius: inherit; background: var(--tone, var(--color-accent)); }
+.c-stat__hint { font-size: var(--text-sm); color: var(--color-text-muted); text-align: center; }
+.c-stat--hero { justify-items: center; padding-block: var(--space-6); }
+.c-stat--hero > .c-stat__label { justify-self: start; }
+button.c-stat:hover { background: var(--color-surface); border-color: var(--tone, var(--color-accent)); }
+button.c-stat[aria-pressed="true"] { background: color-mix(in srgb, var(--tone, var(--color-accent)) 8%, var(--color-surface)); border-color: var(--tone, var(--color-accent)); box-shadow: 0 0 0 1px var(--tone, var(--color-accent)); }
+
+/* Jauge du score */
+.c-gauge { display: grid; inline-size: 100%; max-inline-size: 16rem; }
+.c-gauge > * { grid-area: 1 / 1; }
+.c-gauge svg { inline-size: 100%; block-size: auto; }
+.c-gauge__track { stroke: var(--color-sunken); }
+.c-gauge__value { align-self: end; justify-self: center; margin-block-end: 1.1rem; font-size: 2.75rem; line-height: 1; font-weight: 800; font-variant-numeric: tabular-nums; }
+.c-gauge__max { align-self: end; justify-self: center; font-size: var(--text-sm); color: var(--color-text-muted); }
+
+/* Écrans d'accès : fond légèrement teinté, carte nette */
+.l-auth { background: radial-gradient(60rem 30rem at 15% 0%, color-mix(in srgb, var(--zone-pw) 14%, transparent), transparent 70%), radial-gradient(50rem 30rem at 100% 100%, color-mix(in srgb, var(--zone-admin) 12%, transparent), transparent 70%), var(--color-bg); }
+
+/* Titres de page : un filet court de la couleur d'action */
+#contenu h1[tabindex="-1"]::after { content: ""; display: block; inline-size: 2.5rem; block-size: 3px; margin-block-start: var(--space-2); border-radius: var(--radius-full); background: var(--color-accent); }
+
+/* Barre latérale : libellés sur une ligne, pastilles compactes */
+.l-sidebar .c-sidenav__item > span:not(.c-sidenav__count) { flex: 1; min-inline-size: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.l-sidebar .c-sidenav__item .c-badge { flex: none; padding: 0 var(--space-2); font-size: var(--text-xs); }
+.l-sidebar > .c-sidenav > .c-sidenav__group:first-child { justify-content: flex-start; font-weight: 700; color: var(--color-text); }
+.a-page .a-settings:not(:has(.a-aside .c-sidenav:not([hidden]))) .a-settings__content { max-inline-size: none; }

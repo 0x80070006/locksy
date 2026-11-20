@@ -67,6 +67,13 @@ pub struct SshKey {
     pub private_key: String,
     pub public_key: String,
     pub passphrase: String,
+    /// Serveur, compte et port de connexion (écrits par le client web ; port
+    /// en chaîne, "" si absent). Absents d'un élément 1.0 : chaînes vides.
+    pub host: String,
+    pub username: String,
+    pub port: String,
+    /// Mot de passe du compte, quand la connexion n'utilise pas la clé.
+    pub password: String,
 }
 
 /// Fichier joint : le contenu est chiffré à part avec `key`, clé aléatoire
@@ -94,6 +101,9 @@ pub struct ItemData {
     #[zeroize(skip)]
     pub kind: ItemKind,
     pub name: String,
+    /// Ancien favori porté par l'élément : lu (imports, éléments 1.0), écrit
+    /// seulement s'il est vrai. Les favoris vivent dans les préférences chiffrées.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub favorite: bool,
     pub tags: Vec<String>,
     pub username: String,
@@ -110,6 +120,9 @@ pub struct ItemData {
     pub password_changed_at: i64,
     /// Date de renouvellement choisie par l'utilisateur (0 = aucune).
     pub expires_at: i64,
+    /// L'extension peut injecter le code de vérification dans la page
+    /// (absent = false : le code est seulement copié).
+    pub totp_fill: bool,
 }
 
 impl ItemData {
@@ -167,5 +180,25 @@ mod tests {
     fn unknown_fields_are_tolerated() {
         let item: ItemData = serde_json::from_str(r#"{"kind":"note","name":"x","futur":1}"#).unwrap();
         assert_eq!(item.kind, ItemKind::Note);
+    }
+
+    #[test]
+    fn champs_ssh_et_totp_fill_compatibles() {
+        // Élément 1.0 : champs absents, valeurs par défaut.
+        let old: ItemData =
+            serde_json::from_str(r#"{"kind":"ssh","name":"srv","ssh":{"private_key":"k","public_key":"p","passphrase":""}}"#)
+                .unwrap();
+        assert_eq!((old.ssh.host.as_str(), old.ssh.port.as_str(), old.totp_fill), ("", "", false));
+        // Élément écrit par le client web : relu puis réécrit sans perte.
+        let web = r#"{"kind":"ssh","name":"srv","totp_fill":true,
+            "ssh":{"private_key":"k","public_key":"p","passphrase":"","host":"h.exemple.fr","username":"root","port":"2222","password":"m"}}"#;
+        let item: ItemData = serde_json::from_str(web).unwrap();
+        assert!(item.totp_fill);
+        assert_eq!((item.ssh.host.as_str(), item.ssh.username.as_str()), ("h.exemple.fr", "root"));
+        assert_eq!((item.ssh.port.as_str(), item.ssh.password.as_str()), ("2222", "m"));
+        let text = serde_json::to_string(&item).unwrap();
+        assert!(!text.contains("favorite"), "favori faux jamais écrit : {text}");
+        let again: ItemData = serde_json::from_str(&text).unwrap();
+        assert_eq!(again, item);
     }
 }

@@ -1,0 +1,37 @@
+{
+  "legal.link.notice": "Mentions légales",
+  "legal.link.privacy": "Confidentialité",
+  "legal.link.accessibility": "Accessibilité",
+
+  "legal.a11y.title": "Déclaration d'accessibilité",
+  "legal.a11y.org_default": "votre organisation",
+  "legal.a11y.intro": "{org} s'engage à rendre Locksy accessible, conformément à l'article 47 de la loi n° 2005-102 du 11 février 2005. Cette déclaration porte sur l'interface web de Locksy.",
+  "legal.a11y.status_title": "État de conformité",
+  "legal.a11y.status": "Locksy vise la conformité au référentiel général d'amélioration de l'accessibilité (RGAA 4.1), niveau AA. L'audit complet n'a pas encore été réalisé : son résultat sera publié ici.",
+  "legal.a11y.measures_title": "Ce qui est déjà en place",
+  "legal.a11y.measure.keyboard": "Toutes les actions se font au clavier ; le lien « Aller au contenu » est le premier élément de chaque page.",
+  "legal.a11y.measure.screen_reader": "Les changements de page, les messages et les erreurs sont annoncés aux lecteurs d'écran ; aucun secret n'est lu à voix haute.",
+  "legal.a11y.measure.contrast": "Les contrastes de couleurs sont vérifiés automatiquement ; un mode de contraste renforcé est proposé.",
+  "legal.a11y.measure.zoom": "Le texte peut être agrandi jusqu'à 200 % sans perte d'information.",
+  "legal.a11y.measure.motion": "Les animations sont coupées quand le système demande de réduire les mouvements.",
+  "legal.a11y.limits_title": "Contenus non accessibles",
+  "legal.a11y.limits": "Le lecteur de QR code par l'image peut être difficile à utiliser sans la vue : la clé du code de vérification peut toujours être collée à la place.",
+  "legal.a11y.contact_title": "Signaler un problème",
+  "legal.a11y.contact": "Si un contenu vous est inaccessible, écrivez à {contact} : une solution ou une version accessible vous sera proposée.",
+  "legal.a11y.contact_admin": "Si un contenu vous est inaccessible, prévenez l'administrateur de Locksy dans votre organisation : une solution ou une version accessible vous sera proposée.",
+  "legal.a11y.org_page": "Déclaration d'accessibilité de votre organisation",
+  "legal.a11y.remedy_title": "Voies de recours",
+  "legal.a11y.remedy": "Si vous n'avez pas obtenu de réponse satisfaisante, vous pouvez saisir le Défenseur des droits (defenseurdesdroits.fr, ou par courrier gratuit : Défenseur des droits, Libre réponse 71120, 75342 Paris CEDEX 07).",
+
+  "legal.notice.title": "Mentions légales",
+  "legal.notice.operator": "Ce service Locksy est installé et exploité par {org}.",
+  "legal.notice.zero_knowledge": "Vos mots de passe sont chiffrés dans votre navigateur avant tout envoi : le serveur ne conserve que des données chiffrées qu'il ne peut pas lire.",
+  "legal.notice.dpo": "Délégué à la protection des données : {contact}",
+  "legal.notice.org_page": "Mentions légales de votre organisation",
+
+  "legal.charter.title": "Charte d'utilisation",
+  "legal.charter.intro": "Votre organisation vous demande de lire et d'accepter sa charte d'utilisation avant d'ouvrir le coffre.",
+  "legal.charter.accept": "J'accepte la charte",
+  "legal.charter.accepted": "Charte acceptée.",
+  "legal.charter.none": "Votre organisation n'a pas publié de charte d'utilisation."
+}

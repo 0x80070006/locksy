@@ -1,0 +1,5 @@
+# Contexte : web/. Mêmes exclusions que le Dockerfile du dépôt (web/tests),
+# et jamais de locksy.wasm local qui masquerait celui de l'image de base.
+tests
+locksy.wasm
+locksy-import.wasm

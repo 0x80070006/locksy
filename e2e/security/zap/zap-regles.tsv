@@ -1,0 +1,45 @@
+# Règles du scan ZAP baseline 2.15.0 (passif) contre locksy-direct, lot Q4.
+# Format : identifiant<TAB>action<TAB>(nom). Actions : FAIL, WARN, IGNORE, INFO.
+# FAIL : en-têtes que Locksy garantit sur toutes les réponses (main.rs,
+# security_headers) ; tout écart est une régression. Le reste est relevé en
+# WARN pour lecture humaine ; e2e/security/zap/verdict.mjs exige en plus
+# 0 alerte de risque élevé ou moyen, quelle que soit l'action.
+10038	FAIL	(Content Security Policy (CSP) Header Not Set)
+10020	FAIL	(Missing Anti-clickjacking Header)
+10021	FAIL	(X-Content-Type-Options Header Missing)
+10098	FAIL	(Cross-Domain Misconfiguration)
+# HSTS : sans objet en HTTP clair (parcours rapide). En HTTPS intégré ou
+# derrière un proxy TLS déclaré, l'en-tête est vérifié par entetes.spec.ts.
+10035	IGNORE	(Strict-Transport-Security Header)
+# Politique CSP : la valeur exacte est vérifiée par entetes.spec.ts ;
+# 'wasm-unsafe-eval' est nécessaire au module de chiffrement WebAssembly.
+10055	WARN	(CSP)
+10063	WARN	(Permissions Policy Header Not Set)
+90004	WARN	(Insufficient Site Isolation Against Spectre Vulnerability)
+10036	WARN	(Server Leaks Version Information via "Server" HTTP Response Header Field)
+10037	WARN	(Server Leaks Information via "X-Powered-By" HTTP Response Header Field(s))
+# Cache : l'API impose no-store, l'interface no-cache (revalidation à chaque chargement).
+10015	WARN	(Re-examine Cache-control Directives)
+10049	WARN	(Storable and Cacheable Content)
+# Aucun cookie : l'authentification passe par un jeton Bearer en en-tête.
+10010	WARN	(Cookie No HttpOnly Flag)
+10011	WARN	(Cookie Without Secure Flag)
+10054	WARN	(Cookie without SameSite Attribute)
+90033	WARN	(Loosely Scoped Cookie)
+# Jeton Bearer, pas de cookie de session : un formulaire n'a pas besoin de jeton anti-CSRF.
+10202	WARN	(Absence of Anti-CSRF Tokens)
+10017	WARN	(Cross-Domain JavaScript Source File Inclusion)
+10023	WARN	(Information Disclosure - Debug Error Messages)
+10024	WARN	(Information Disclosure - Sensitive Information in URL)
+10027	WARN	(Information Disclosure - Suspicious Comments)
+10096	WARN	(Timestamp Disclosure)
+10105	WARN	(Weak Authentication Method)
+10110	WARN	(Dangerous JS Functions)
+90022	WARN	(Application Error Disclosure)
+# Alerte sur le scanner lui-même, pas sur Locksy : la version 2.15.0 est
+# épinglée exprès (05-strategie §1.2). Écartée aussi par verdict.mjs.
+10116	IGNORE	(ZAP is Out of Date)
+# Informations sans risque : application monopage, requêtes d'authentification repérées.
+10109	IGNORE	(Modern Web Application)
+10111	IGNORE	(Authentication Request Identified)
+10112	IGNORE	(Session Management Response Identified)

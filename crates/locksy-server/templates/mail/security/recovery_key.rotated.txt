@@ -1,0 +1,4 @@
+Votre clé de récupération a été renouvelée
+Une nouvelle clé de récupération a été créée pour votre compte {{org}}. L'ancienne ne fonctionne plus : conservez la nouvelle en lieu sûr.
+
+Si vous n'êtes pas à l'origine de ce changement, prévenez sans attendre votre administrateur.

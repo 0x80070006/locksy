@@ -1,0 +1,7 @@
+E-mail de test de {{org}}
+
+Bonjour,
+
+Ce message confirme que {{org}} peut envoyer des e-mails : invitations, alertes de sécurité et résumés pour les administrateurs.
+
+Envoyé le {{date}}.

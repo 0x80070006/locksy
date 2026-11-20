@@ -1,0 +1,14 @@
+{
+  "name": "locksy-bench",
+  "private": true,
+  "type": "module",
+  "description": "Banc de charge et semis de Locksy (mode d'emploi : README.md). Aucune dépendance.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "seed": "node seed/seed.mjs",
+    "verify": "node seed/verify.mjs",
+    "preflight": "bash scripts/preflight.sh"
+  }
+}

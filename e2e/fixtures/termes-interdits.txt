@@ -1,0 +1,24 @@
+# Termes techniques interdits à l'écran (fixture textGuard). Une expression
+# régulière JavaScript par ligne (drapeaux « iu » sauf mention), au format
+# « nom<TAB>expression ». Source : cahier §2.11 (glossaire fermé) et audit 05 §4.1.
+# Seuls les termes interdits PARTOUT figurent ici : les mots dont l'interdiction
+# dépend du contexte (« jeton », « Supprimer », « Effacer », « Quitter »,
+# « Collection », « Espace ») relèvent des tests de chaque écran.
+undefined	(?<![\p{L}\p{N}_])undefined(?![\p{L}\p{N}_])
+null	(?<![\p{L}\p{N}_])null(?![\p{L}\p{N}_])
+NaN	(?<![\p{L}\p{N}_])NaN(?![\p{L}\p{N}_])
+[object	\[object
+Error:	(?<![\p{L}\p{N}_])(?:Type|Range|Reference|Syntax)?Error\s*:
+pile d'appels	\bat\s+[\w$.]+\s+\(?(?:https?|file):
+UUID	\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b
+erreur 5xx	(?:erreur|error|code|statut|status|HTTP)\s*:?\s*5\d\d\b
+code HTTP	\bHTTP\s*[1-5]\d\d\b
+Login	(?<![\p{L}\p{N}_])log[ -]?in(?![\p{L}\p{N}_])
+TOTP	(?<![\p{L}\p{N}_])TOTP(?![\p{L}\p{N}_])
+otpauth	otpauth
+base32	(?<![\p{L}\p{N}_])base\s?32(?![\p{L}\p{N}_])
+2FA seul	(?<![\p{L}\p{N}_])2FA(?![\p{L}\p{N}_])
+bits	(?<![\p{L}\p{N}_])bits(?![\p{L}\p{N}_])
+Share	(?<![\p{L}\p{N}_])share(?![\p{L}\p{N}_])
+OIDC, LDAP, SCIM seuls	(?<![(\p{L}\p{N}_])(?:OIDC|LDAP|SCIM)(?![)\p{L}\p{N}_])
+Santé	(?<![\p{L}\p{N}_])Santé(?![\p{L}\p{N}_])

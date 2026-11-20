@@ -1,0 +1,26 @@
+/* Locksy : administration (cahier 00, §2.8, 3.4, 4.8). Chargé par la vue admin seulement. */
+
+/* Bandeau « Vous gérez les accès, pas les secrets » */
+.a-banner { padding: var(--space-2) var(--space-4); background: var(--color-info-bg); font-size: var(--text-sm); }
+
+/* Tableaux denses : en densité compacte, --text-sm et lignes serrées */
+.a-page .c-table th { position: sticky; inset-block-start: 0; z-index: 1; }
+.a-page .c-table td[data-num] { text-align: end; font-variant-numeric: tabular-nums; }
+[data-density="compact"] .a-page .c-table :is(th, td) { padding: var(--space-1) var(--space-2); font-size: var(--text-sm); }
+
+/* Réglages : sections à gauche, contenu à droite dès 900 px */
+.a-settings { display: grid; gap: var(--space-5); align-items: start; }
+.a-settings__content { min-inline-size: 0; max-inline-size: min(100%, 48rem); }
+@media (width >= 56.25em) {
+  .a-settings { grid-template-columns: 14rem minmax(0, 1fr); }
+  .a-settings > .c-sidenav { position: sticky; inset-block-start: var(--space-4); }
+}
+
+/* .c-wizard (__steps, __step[aria-current="step"], __step[data-done]) : assistants */
+.c-wizard { display: grid; gap: var(--space-5); max-inline-size: min(100%, 45rem); }
+.c-wizard__steps { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); margin: 0; padding: 0 0 var(--space-3); list-style: none; counter-reset: step; border-block-end: 1px solid var(--color-border); }
+.c-wizard__step { display: flex; align-items: center; gap: var(--space-2); color: var(--color-text-muted); counter-increment: step; }
+.c-wizard__step::before { content: counter(step); display: grid; place-items: center; inline-size: 1.75rem; block-size: 1.75rem; border: 2px solid var(--color-border-strong); border-radius: 50%; font-size: var(--text-sm); font-weight: 700; }
+.c-wizard__step[aria-current="step"] { color: var(--color-text); font-weight: 600; }
+.c-wizard__step[aria-current="step"]::before { border-color: var(--color-accent); color: var(--color-accent); }
+.c-wizard__step[data-done]::before { border-color: var(--color-ok); background: var(--color-ok); color: var(--color-on-accent); }

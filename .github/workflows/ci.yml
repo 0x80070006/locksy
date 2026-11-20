@@ -1,0 +1,439 @@
+# Intégration continue de Locksy : format, analyse statique, tests de chaque
+# crate, JavaScript, scripts shell, chaîne d'approvisionnement (cargo-deny,
+# cargo-audit), image Docker analysée par Trivy, et fuzzing (non bloquant).
+#
+# Rust : la version vient de rust-toolchain.toml (rustup l'installe), et doit
+# rester celle des Dockerfiles (étape « toolchain cohérente » du job clippy).
+# Toutes les actions tierces sont épinglées par SHA de commit complet ; la
+# version lisible est en commentaire. Dependabot (.github/dependabot.yml)
+# propose les mises à jour.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Moindre privilège : lecture seule du dépôt pour tous les jobs.
+permissions:
+  contents: read
+
+# Une nouvelle poussée sur la même branche annule l'exécution précédente.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  RUST_BACKTRACE: "1"
+
+jobs:
+  fmt:
+    name: fmt
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    # Non bloquant : rustfmt n'a jamais été passé sur le code ; reformatage
+    # global à faire dans un commit dédié, puis retirer continue-on-error.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Toolchain Rust (rust-toolchain.toml)
+        run: |
+          rustup toolchain install || rustup show
+          rustup component add rustfmt
+      - run: cargo fmt --all -- --check
+
+  clippy:
+    name: clippy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Toolchain cohérente (rust-toolchain.toml = Dockerfiles)
+        run: |
+          set -euo pipefail
+          V=$(sed -n 's/^channel *= *"\([^"]*\)".*/\1/p' rust-toolchain.toml)
+          [ -n "$V" ] || { echo "::error file=rust-toolchain.toml::channel introuvable"; exit 1; }
+          echo "rust-toolchain.toml : $V"
+          ok=1
+          for f in Dockerfile Dockerfile.release Dockerfile.desktop; do
+            if grep -Eq "rust:${V//./\\.}-trixie@sha256:[0-9a-f]{64}" "$f"; then
+              echo "$f : rust:$V épinglé"
+            else
+              echo "::error file=$f::l'image Rust doit être rust:$V-trixie@sha256:… (rust-toolchain.toml)"
+              ok=0
+            fi
+          done
+          # Le Dockerfile qu'écrit install.sh (mode docker) doit utiliser la
+          # même image Debian d'exécution que Dockerfile.
+          D=$(grep -Eo 'debian:[^ ]+@sha256:[0-9a-f]{64}' Dockerfile | head -n1)
+          if [ -n "$D" ] && ! grep -qF "$D" install.sh; then
+            echo "::warning file=install.sh::image Debian différente de Dockerfile ($D)"
+          fi
+          [ "$ok" = 1 ]
+      - name: Toolchain Rust (rust-toolchain.toml)
+        run: (rustup toolchain install || rustup show) && rustup show active-toolchain
+      - name: Dépendances système (client de bureau sous Linux, MinGW)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends pkg-config libssl-dev \
+            gcc-mingw-w64-x86-64-win32 binutils-mingw-w64-x86-64
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          shared-key: clippy
+      # -D warnings : aucun avertissement toléré, sur toutes les cibles livrées.
+      - name: clippy (tout l'espace de travail ; tests compris)
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: clippy (module WebAssembly, complet puis principal)
+        run: |
+          cargo clippy -p locksy-wasm --target wasm32-unknown-unknown --locked -- -D warnings
+          cargo clippy -p locksy-wasm --no-default-features --all-targets --locked -- -D warnings
+      - name: clippy (client Windows)
+        run: cargo clippy -p locksy-desktop --target x86_64-pc-windows-gnu --locked -- -D warnings
+
+  test-core:
+    name: test-core
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Toolchain Rust (rust-toolchain.toml)
+        run: (rustup toolchain install || rustup show) && rustup show active-toolchain
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          shared-key: test-core
+      - run: cargo test -p locksy-core --locked
+
+  test-server:
+    name: test-server
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Toolchain Rust (rust-toolchain.toml)
+        run: (rustup toolchain install || rustup show) && rustup show active-toolchain
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          shared-key: test-server
+      - run: cargo test -p locksy-server --locked
+
+  test-desktop:
+    name: test-desktop
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Toolchain Rust (rust-toolchain.toml)
+        run: (rustup toolchain install || rustup show) && rustup show active-toolchain
+      - name: Dépendances système (OpenSSL pour les tests Linux, MinGW pour Windows)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends pkg-config libssl-dev \
+            gcc-mingw-w64-x86-64-win32 binutils-mingw-w64-x86-64
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          shared-key: test-desktop
+      - run: cargo test -p locksy-desktop --locked
+      - run: cargo check -p locksy-desktop --target x86_64-pc-windows-gnu --locked
+
+  wasm:
+    name: wasm
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Toolchain Rust (rust-toolchain.toml)
+        run: (rustup toolchain install || rustup show) && rustup show active-toolchain
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          shared-key: wasm
+      - name: Tests du module (sans les lecteurs d'import)
+        run: cargo test -p locksy-wasm --no-default-features --locked
+      # Deux modules, comme Dockerfile et Dockerfile.release : locksy.wasm
+      # (noyau, budget ≤ 700 Ko) et locksy-import.wasm (worker d'import).
+      - name: Compilation des modules WebAssembly
+        run: |
+          set -euo pipefail
+          mkdir -p dist/release
+          cargo build --release --locked -p locksy-wasm --target wasm32-unknown-unknown
+          cp target/wasm32-unknown-unknown/release/locksy_wasm.wasm dist/release/locksy-import.wasm
+          cargo build --release --locked -p locksy-wasm --target wasm32-unknown-unknown --no-default-features
+          cp target/wasm32-unknown-unknown/release/locksy_wasm.wasm dist/release/locksy.wasm
+          ls -l dist/release/*.wasm
+          size=$(stat -c %s dist/release/locksy.wasm)
+          gz=$(gzip -9 -c dist/release/locksy.wasm | wc -c)
+          echo "locksy.wasm : $size octets, $gz en gzip"
+          [ "$size" -le 716800 ] || { echo "::error::locksy.wasm dépasse 700 Ko ($size)"; exit 1; }
+          [ "$gz" -le 266240 ] || { echo "::error::locksy.wasm dépasse 260 Ko en gzip ($gz)"; exit 1; }
+      # Facultatif et informatif : le module publié reste celui de
+      # Dockerfile.release (non optimisé par wasm-opt), pour que la CI teste
+      # exactement ce qui est livré.
+      - name: Gain possible de wasm-opt (informatif)
+        continue-on-error: true
+        run: |
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends binaryen
+          wasm-opt -Oz --enable-bulk-memory --enable-nontrapping-float-to-int --enable-sign-ext \
+            --enable-mutable-globals dist/release/locksy.wasm -o "$RUNNER_TEMP/locksy.opt.wasm"
+          ls -l dist/release/locksy.wasm "$RUNNER_TEMP/locksy.opt.wasm"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: locksy.wasm
+          path: dist/release/*.wasm
+          if-no-files-found: error
+          retention-days: 7
+
+  js:
+    name: js
+    needs: wasm
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          # LTS active ; les tests utilisent node:test et zlib.crc32.
+          node-version: "26"
+      # Les tests de vault.js et du build de l'extension chargent le vrai
+      # module WebAssembly depuis dist/release/locksy.wasm.
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: locksy.wasm
+          path: dist/release
+      - name: Syntaxe (node --check)
+        run: |
+          set -euo pipefail
+          n=0
+          while IFS= read -r -d '' f; do
+            node --check "$f"; n=$((n + 1))
+          done < <(find web/js extension/src tools bench/k6 bench/scripts -type f \( -name '*.js' -o -name '*.mjs' \) -print0 \
+                   ; printf '%s\0' extension/build.mjs \
+                   ; find web/tests -type f -name '*.mjs' -print0)
+          echo "$n fichiers vérifiés"
+      - name: Fichiers générés à jour (jetons, icônes, textes, docs/Reglages.md) et contrastes
+        run: |
+          node tools/gen-tokens.mjs --check
+          node tools/gen-icons.mjs --check
+          node tools/gen-i18n.mjs --check
+          node tools/gen-settings-doc.mjs --check
+          node tools/check-contrast.mjs
+      # Règle R3 : aucun texte affiché en dur. Les modules partagés de bas
+      # niveau (api.js, vault.js, pins.js, wasm.js) gardent des messages de
+      # repli, documentés dans leur en-tête : hors de ce contrôle.
+      - name: Textes en dur (lint-strings, bloquant)
+        run: |
+          node tools/lint-strings.mjs --strict web/js/views web/js/ui extension/src \
+            web/js/app.js web/js/share.js web/js/router.js web/js/routes.js web/js/settings-client.js \
+            web/js/import.js web/js/import-worker.js web/js/i18n.js web/js/aad.js
+      - name: Règles R1 (pas de HTML injecté, pas d'évaluation, pas de style en ligne)
+        run: |
+          set -euo pipefail
+          if grep -rnE "innerHTML|outerHTML|insertAdjacentHTML|eval\(|new Function" web/js extension/src --include='*.js' --exclude-dir=i18n; then
+            echo "::error::règle R1 enfreinte"; exit 1
+          fi
+          if grep -rnE "<script>|<style|style=" web/*.html extension/src/*.html; then
+            echo "::error::script ou style en ligne dans une page"; exit 1
+          fi
+      - name: Tests des outils (jetons, icônes, textes, client des réglages)
+        run: node --test tools/test/
+      - name: Tests web
+        run: node --test web/tests/
+      - name: Tests de l'extension
+        working-directory: extension
+        run: node --test src/test/
+      - name: Extension reproductible (deux constructions, même empreinte)
+        run: |
+          set -euo pipefail
+          node extension/build.mjs --wasm dist/release/locksy.wasm >/dev/null
+          a=$(sha256sum extension/dist/locksy-extension.zip | cut -d' ' -f1)
+          node extension/build.mjs --wasm dist/release/locksy.wasm >/dev/null
+          b=$(sha256sum extension/dist/locksy-extension.zip | cut -d' ' -f1)
+          echo "empreinte : $a"
+          [ "$a" = "$b" ] || { echo "::error::archive de l'extension non reproductible ($a ≠ $b)"; exit 1; }
+      - name: Banc k6 (bibliothèque et rapport, sans Docker)
+        run: node --test bench/k6/test/
+
+  shell:
+    name: shell
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Syntaxe (bash -n)
+        run: for f in install.sh scripts/*.sh e2e/tools/*.sh bench/scripts/*.sh; do echo "$f"; bash -n "$f"; done
+      # Image officielle épinglée par empreinte (shellcheck 0.11.0, la version
+      # de la vérification locale) : le paquet d'Ubuntu 24.04 (0.9.0) est
+      # plus ancien et ne signale pas les mêmes écarts.
+      - name: shellcheck -S warning
+        run: |
+          docker run --rm --network none -v "$PWD:/mnt:ro" -w /mnt \
+            koalaman/shellcheck@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d \
+            -S warning install.sh scripts/*.sh
+
+  deny:
+    name: deny
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Toolchain Rust (rust-toolchain.toml)
+        run: (rustup toolchain install || rustup show) && rustup show active-toolchain
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          shared-key: deny
+          cache-bin: true
+      # Version épinglée : les versions antérieures à 0.21 ne lisent plus les avis
+      # RustSec notés en CVSS 4.0 (même version que e2e/security/run.sh --cargo).
+      - name: Installation de cargo-deny
+        run: command -v cargo-deny || cargo install cargo-deny --version 0.21.0 --locked
+      # Licences, avis de sécurité RustSec, jokers et sources (deny.toml).
+      - name: cargo deny
+        run: cargo deny check
+
+  audit:
+    name: audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Toolchain Rust (rust-toolchain.toml)
+        run: (rustup toolchain install || rustup show) && rustup show active-toolchain
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          shared-key: audit
+          cache-bin: true
+      - name: Installation de cargo-audit
+        run: command -v cargo-audit || cargo install cargo-audit --version 0.23.0 --locked
+      # Base RustSec à jour à chaque exécution ; échoue sur toute vulnérabilité.
+      # Exceptions : lues dans deny.toml ([advisories] ignore), seule source,
+      # où chacune est justifiée (raison, condition de retrait).
+      - name: cargo audit
+        run: |
+          set -euo pipefail
+          args=()
+          while IFS= read -r id; do
+            args+=(--ignore "$id")
+          done < <(grep -Eo 'id = "RUSTSEC-[0-9]{4}-[0-9]{4}"' deny.toml | grep -Eo 'RUSTSEC-[0-9]{4}-[0-9]{4}')
+          echo "Exceptions : ${args[*]:-aucune}"
+          cargo audit "${args[@]}"
+
+  docker:
+    name: docker
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Horodatage de la source (compilation reproductible)
+        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Image locksy:ci (Dockerfile, tests compris)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: Dockerfile
+          load: true
+          push: false
+          tags: locksy:ci
+          build-args: |
+            SOURCE_DATE_EPOCH=${{ env.SOURCE_DATE_EPOCH }}
+            VERSION=ci
+            REVISION=${{ github.sha }}
+            SOURCE=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha,scope=docker-ci
+          cache-to: type=gha,scope=docker-ci,mode=max
+      - name: Vérification de l'image (version, healthcheck déclaré)
+        run: |
+          docker run --rm locksy:ci version
+          docker image inspect locksy:ci --format '{{json .Config.Healthcheck}} {{.Config.User}}'
+      - name: Trivy (image) — vulnérabilités CRITICAL et HIGH corrigeables
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.76.2
+          scan-type: image
+          image-ref: locksy:ci
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          # Exceptions datées et justifiées (vide = objectif).
+          trivyignores: .github/trivyignore
+          format: table
+          exit-code: "1"
+      # Constat du 17/11/2026 : Dockerfile sans écart ; DS-0002 (pas de USER)
+      # sur Dockerfile.release et Dockerfile.desktop, faux positif : ce sont
+      # des images d'export (FROM scratch), jamais exécutées.
+      - name: Trivy (configuration des Dockerfiles, informatif)
+        continue-on-error: true
+        env:
+          TRIVY_MISCONFIG_SCANNERS: dockerfile
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.76.2
+          skip-setup-trivy: true
+          scan-type: config
+          scan-ref: .
+          severity: CRITICAL,HIGH,MEDIUM
+          exit-code: "1"
+
+  fuzz:
+    name: fuzz
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    # Non bloquant : exploration aléatoire courte (30 s par cible) ; un
+    # plantage trouvé est publié en artefact pour reproduction locale.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Toolchain nightly (cargo-fuzz exige -Z sanitizer)
+        run: rustup toolchain install nightly --profile minimal
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          shared-key: fuzz
+          workspaces: fuzz -> target
+          cache-bin: true
+      - name: Installation de cargo-fuzz
+        run: command -v cargo-fuzz || cargo +nightly install cargo-fuzz --locked
+      - name: Compilation des cibles
+        run: cargo +nightly fuzz build
+      - name: Exploration (30 s par cible)
+        run: |
+          set -euo pipefail
+          status=0
+          for t in $(cargo +nightly fuzz list); do
+            echo "::group::$t"
+            cargo +nightly fuzz run "$t" -- -max_total_time=30 || status=1
+            echo "::endgroup::"
+          done
+          exit "$status"
+      - name: Cas de plantage trouvés
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: fuzz-artifacts
+          path: fuzz/artifacts
+          if-no-files-found: ignore
+          retention-days: 14

@@ -1,0 +1,7 @@
+{
+  "errors.last_owner": "L'organisation doit garder au moins un propriétaire actif. Nommez d'abord un autre propriétaire.",
+  "errors.self_action": "Cette action n'est pas possible sur votre propre compte. Demandez-la à un autre administrateur.",
+  "errors.email_taken": "Cette adresse e-mail est déjà utilisée par un autre compte.",
+  "errors.not_a_member": "Le repreneur choisi n'est pas membre de ce coffre. Choisissez une personne qui y a déjà accès.",
+  "errors.invalid_transfer": "Ce transfert n'est pas possible : vérifiez le coffre et le repreneur choisis, puis réessayez."
+}

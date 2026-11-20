@@ -1,4 +1,26 @@
 target
+**/target
 **/*.exe
 .git
+.github
 dist
+docs
+fuzz
+web/tests
+extension/dist
+extension/node_modules
+# Les Dockerfiles ne copient que Cargo.*, crates, branding et web : aucune
+# documentation n'entre dans les images.
+*.md
+**/*.md
+# Sorties et caches des tests de bout en bout et du banc (volumineux, jamais
+# dans une image).
+e2e/node_modules
+e2e/.npm-cache
+e2e/test-results
+e2e/playwright-report
+e2e/.state
+bench/.cache
+bench/snapshots
+bench/seed/out
+bench/results

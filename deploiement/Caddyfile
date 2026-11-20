@@ -12,11 +12,21 @@ https://locksy.corp.local {
 	tls /certs/locksy.crt /certs/locksy.key {
 		protocols tls1.2 tls1.3
 	}
-	header Strict-Transport-Security "max-age=31536000"
+	header {
+		# HSTS aligné sur le serveur Locksy (2 ans), posé une seule fois (defer).
+		Strict-Transport-Security "max-age=63072000"
+		# Variante à n'activer que si TOUS les sous-domaines du domaine sont en
+		# HTTPS (sinon ils deviennent inaccessibles depuis les navigateurs) :
+		# Strict-Transport-Security "max-age=63072000; includeSubDomains"
+		defer
+	}
 	request_body {
 		max_size 20MB
 	}
 	reverse_proxy locksy:8743 {
+		# Locksy lit l'entrée la plus à droite de X-Forwarded-For : celle-ci.
 		header_up X-Forwarded-For {remote_host}
+		# Le serveur envoie son propre HSTS (LOCKSY_TRUST_PROXY=true) : pas de doublon.
+		header_down -Strict-Transport-Security
 	}
 }

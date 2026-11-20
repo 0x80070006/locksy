@@ -51,7 +51,7 @@ fn charset_size(pw: &str) -> f64 {
     if pw.chars().any(|c| c.is_ascii_punctuation() || c == ' ') {
         size += 33.0;
     }
-    if pw.chars().any(|c| !c.is_ascii()) {
+    if !pw.is_ascii() {
         size += 60.0;
     }
     size

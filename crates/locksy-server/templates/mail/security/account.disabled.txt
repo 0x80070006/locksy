@@ -1,0 +1,4 @@
+Votre compte a été désactivé
+Votre compte {{org}} a été désactivé : vous ne pouvez plus vous connecter.
+
+Pour toute question, adressez-vous à votre administrateur.

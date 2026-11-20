@@ -1,0 +1,5 @@
+{
+  "errors.email_not_sent": "L'e-mail n'a pas pu être envoyé. Le détail de l'échec est indiqué ci-dessous.",
+  "errors.mail_disabled": "L'envoi des e-mails est désactivé. Activez-le dans les réglages des e-mails, puis réessayez.",
+  "errors.smtp_insecure": "Un envoi sans chiffrement n'est permis que vers un serveur du réseau interne. Choisissez STARTTLS ou TLS."
+}

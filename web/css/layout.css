@@ -1,0 +1,68 @@
+/* Locksy : mise en page (cahier 00, §2.4, 3.2). Ruptures en em : 37.5em (600 px), 56.25em (900 px), 75em (1200 px). */
+
+/* .l-shell, .l-sidebar (tiroir sous 900 px : hidden + inert posés par la coquille), .l-topbar, .l-main */
+.l-shell { display: grid; grid-template-columns: minmax(0, 1fr); block-size: 100%; }
+.l-sidebar { display: flex; flex-direction: column; min-block-size: 0; overflow-y: auto; background: var(--color-surface); border-inline-end: 1px solid var(--color-border); }
+.l-topbar {
+  position: sticky; inset-block-start: 0; z-index: 10; display: flex; align-items: center; gap: var(--space-3); min-block-size: 3.5rem;
+  padding: var(--space-2) var(--space-4); background: var(--color-surface); border-block-end: 1px solid var(--color-border);
+}
+.l-main { display: flex; flex-direction: column; min-inline-size: 0; min-block-size: 0; overflow: auto; }
+@media (width < 56.25em) {
+  .l-sidebar { position: fixed; inset-block: 0; inset-inline-start: 0; z-index: 45; inline-size: min(85vw, var(--sidebar-w)); box-shadow: var(--shadow-3); }
+}
+@media (width >= 56.25em) {
+  .l-shell { grid-template-columns: var(--sidebar-w) minmax(0, 1fr); }
+}
+
+/* .l-split[data-view="list"|"detail"] : liste et fiche (une seule des deux sous 600 px) */
+.l-split { display: grid; grid-template-columns: minmax(0, 1fr); block-size: 100%; min-block-size: 0; }
+.l-split > * { min-inline-size: 0; min-block-size: 0; overflow-y: auto; }
+.l-split > :first-child { background: var(--color-surface); }
+@media (width < 37.5em) {
+  .l-split[data-view="detail"] > :first-child, .l-split:not([data-view="detail"]) > :last-child:not(:first-child) { display: none; }
+}
+@media (width >= 37.5em) {
+  .l-split { grid-template-columns: minmax(16rem, 2fr) minmax(0, 3fr); }
+  .l-split > :first-child { border-inline-end: 1px solid var(--color-border); }
+}
+@media (width >= 75em) {
+  .l-split { grid-template-columns: var(--list-w) minmax(0, 1fr); }
+}
+
+/* .l-stack[data-gap="1..6"], .l-cluster[data-justify], .l-grid */
+.l-stack { display: flex; flex-direction: column; gap: var(--stack-gap, var(--space-4)); }
+.l-stack[data-gap="1"] { --stack-gap: var(--space-1); }
+.l-stack[data-gap="2"] { --stack-gap: var(--space-2); }
+.l-stack[data-gap="3"] { --stack-gap: var(--space-3); }
+.l-stack[data-gap="4"] { --stack-gap: var(--space-4); }
+.l-stack[data-gap="5"] { --stack-gap: var(--space-5); }
+.l-stack[data-gap="6"] { --stack-gap: var(--space-6); }
+.l-cluster { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.l-cluster[data-justify="between"] { justify-content: space-between; }
+.l-cluster[data-justify="end"] { justify-content: flex-end; }
+.l-grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr)); }
+
+/* .l-actionbar : barre d'action, fixée en bas sous 600 px */
+.l-actionbar { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); }
+@media (width < 37.5em) {
+  .l-actionbar {
+    position: fixed; inset-inline: 0; inset-block-end: 0; z-index: 30; justify-content: space-around;
+    padding: var(--space-2) var(--space-4) max(var(--space-2), env(safe-area-inset-bottom, 0px));
+    background: var(--color-surface); border-block-start: 1px solid var(--color-border);
+  }
+}
+
+/* .l-auth > .l-auth__card : écrans hors session (accès, pages statiques, lien partagé) */
+.l-auth { min-block-size: 100%; display: grid; place-items: center; padding: var(--space-6) max(var(--space-4), env(safe-area-inset-left, 0px)); }
+.l-auth__card {
+  inline-size: 100%; max-inline-size: min(100%, 27.5rem); padding: var(--space-6);
+  background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-2);
+}
+@media (width < 37.5em) {
+  .l-auth { padding: var(--space-4); }
+  .l-auth__card { padding: var(--space-5); }
+}
+
+/* .l-view : conteneur d'une navigation (routeur), transparent pour la mise en page */
+.l-view { display: contents; }
