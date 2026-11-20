@@ -7,7 +7,7 @@ license.workspace = true
 
 [dependencies]
 locksy-core = { path = "../locksy-core" }
-axum = { version = "0.7", features = ["macros"] }
+axum = { version = "0.8", features = ["macros"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "signal", "time", "sync", "fs"] }
 # compression-gzip : fichiers de l'interface compressés (JS, CSS, wasm).
 tower-http = { version = "0.6", features = ["fs", "set-header", "limit", "timeout", "catch-panic", "trace", "compression-gzip"] }
