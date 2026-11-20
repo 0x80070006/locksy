@@ -25,7 +25,7 @@ unicode-normalization = "0.1"
 # Crates RustCrypto et rust-lang maintenues, compilables en wasm32, sans code C.
 aes = { version = "0.8", default-features = false }
 cbc = { version = "0.1", default-features = false, features = ["block-padding"] }
-chacha20 = { version = "0.9", default-features = false }
+chacha20 = { version = "0.10", default-features = false }
 salsa20 = { version = "0.10", default-features = false }
 pbkdf2 = { version = "0.12", default-features = false, features = ["hmac"] }
 flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
